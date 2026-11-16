@@ -4,6 +4,16 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api import (
+    admin_users_router,
+    auth_router,
+    portals_router,
+    products_router,
+    profile_router,
+    rfqs_router,
+    support_router,
+)
+
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / 'frontend' / 'dist'
 
 
@@ -18,17 +28,32 @@ class SPAStaticFiles(StaticFiles):
 
 
 def create_app(frontend_dist: Path = FRONTEND_DIST) -> FastAPI:
-    app = FastAPI(title='KPC API', version='0.1.0')
+    app = FastAPI(
+        title='KPC API',
+        description='Khodel Pattern Craft B2B Platform API',
+        version='0.3.0',
+    )
 
     @app.get('/api/health')
     def health():
         # Liveness only: this does not claim database/authentication readiness.
         return {'status': 'ok', 'service': 'kpc-api'}
 
+    # Include feature routers
+    app.include_router(auth_router)
+    app.include_router(profile_router)
+    app.include_router(admin_users_router)
+    app.include_router(products_router)
+    app.include_router(rfqs_router)
+    app.include_router(support_router)
+    app.include_router(portals_router)
+
+    # API 404 handler for unmatched /api routes
     @app.api_route('/api/{path:path}', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'])
     def unknown_api(path: str):
         raise HTTPException(status_code=404, detail='API endpoint not found')
 
+    # Serve built SPA frontend if present
     if frontend_dist.is_dir():
         app.mount('/', SPAStaticFiles(directory=frontend_dist, html=True), name='frontend')
 

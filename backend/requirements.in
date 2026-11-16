@@ -6,3 +6,5 @@ alembic
 psycopg[binary]
 pytest
 httpx
+argon2-cffi
+python-multipart
