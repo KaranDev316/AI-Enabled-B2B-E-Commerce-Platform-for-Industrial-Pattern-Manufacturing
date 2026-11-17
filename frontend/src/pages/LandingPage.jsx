@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import referenceImage from '../assets/landing-reference.webp';
 import './LandingPage.css';
+import { downloadSpecifications } from '../data/downloadSpecifications';
 import { PublicHeader } from '../components/PublicHeader';
 
-const patterns = [
+export const patterns = [
   { title: 'Precision Wood Patterns', description: 'High-quality wooden patterns crafted for traditional casting molds.', detail: 'Share your casting application, dimensions, material preferences, and drawings. Our team reviews your requirement before preparing a quotation.', x: 103, y: 582, width: 208, height: 103, icon: 'layers' },
   { title: 'High-Tolerance Metal Patterns', description: 'Metallic patterns for repeatable industrial casting applications.', detail: 'Tell us about the part, required tolerances, quantity, and casting process. Include technical drawings so the team can review the specification.', x: 351, y: 582, width: 212, height: 103, icon: 'cube' },
   { title: 'Sand Casting Solutions', description: 'Purpose-built patterns shaped around your foundry’s requirements.', detail: 'Describe the casting method, shrinkage allowances, core box requirements, and surface finish you need. Final specifications are confirmed during quotation.', x: 604, y: 582, width: 209, height: 103, icon: 'box' },
@@ -37,7 +38,7 @@ function Icon({ name, ...props }) {
 }
 
 // Display only the artwork regions of the supplied reference; keep its source intact.
-function PatternArt({ crop, className = '', label }) {
+export function PatternArt({ crop, className = '', label }) {
   return <div className={`pattern-art ${className}`} role="img" aria-label={label} style={{ aspectRatio: `${crop.width} / ${crop.height}` }}>
     <img src={referenceImage} alt="" draggable="false" style={{ width: `${1536 / crop.width * 100}%`, left: `${-crop.x / crop.width * 100}%`, top: 0, transform: `translateY(${-crop.y / 1024 * 100}%)` }} />
   </div>;
@@ -46,15 +47,21 @@ function PatternArt({ crop, className = '', label }) {
 export function LandingPage() {
   const { user } = useAuth();
   const [activeCard, setActiveCard] = useState(0);
-  const [selectedPattern, setSelectedPattern] = useState(null);
   const cardsRef = useRef(null);
   const dialogRef = useRef(null);
+  const [selectedPattern, setSelectedPattern] = useState(null);
+  useEffect(() => { if (selectedPattern) dialogRef.current?.showModal(); }, [selectedPattern]);
+  const specificationRows = selectedPattern ? [
+    ['Pattern capability', selectedPattern.title],
+    ['Material', selectedPattern.title.includes('Wood') ? 'Wood' : selectedPattern.title.includes('Metal') ? 'Metal' : 'To be confirmed'],
+    ['Dimensions', 'Confirmed against your drawings'],
+    ['Tolerance', 'To be confirmed during quotation'],
+    ['Surface finish', 'To be confirmed during quotation'],
+    ['Pattern weight', 'Depends on the agreed design'],
+    ['Price and lead time', 'Provided in the official quotation'],
+  ] : [];
   const portal = user ? `/${user.role}` : '/login';
   const quotePath = '/customer';
-
-  useEffect(() => {
-    if (selectedPattern) dialogRef.current?.showModal();
-  }, [selectedPattern]);
 
   function trackCard() {
     const rail = cardsRef.current;
@@ -102,8 +109,17 @@ export function LandingPage() {
       <section className="public-contact" id="contact" aria-labelledby="contact-heading"><div className="public-container"><div><p className="public-eyebrow">Let’s build your next pattern</p><h2 id="contact-heading">Have a drawing or a requirement?</h2><p>Sign in to share your specifications with the KPC team.</p></div><div className="public-contact-actions"><Link className="public-button public-button-orange" to={quotePath}>Get a Quote <Icon name="arrow" /></Link><Link to={user ? portal : '/register'}>{user ? 'Go to my portal' : 'New to KPC? Create an account'}</Link></div></div></section>
     </main>
     <footer className="public-footer public-container"><Link className="public-logo" to="/" aria-label="Khodel Pattern Craft home"><strong><i>K</i>PC</strong><small>KHODEL PATTERN CRAFT</small></Link><p>Industrial pattern manufacturing<br/><span>Ahmedabad, Gujarat, India</span></p><a href="#home">Back to top ↑</a></footer>
-    <dialog ref={dialogRef} className="public-pattern-dialog" onClose={() => setSelectedPattern(null)} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }} aria-labelledby="pattern-dialog-title">
-      {selectedPattern && <><button className="public-dialog-close" aria-label="Close pattern details" onClick={() => dialogRef.current.close()}><Icon name="close" /></button><PatternArt crop={selectedPattern} label={selectedPattern.title}/><p className="public-eyebrow">Pattern capabilities</p><h2 id="pattern-dialog-title">{selectedPattern.title}</h2><p>{selectedPattern.detail}</p><p className="public-dialog-note">Material, price, and lead time are confirmed in your quotation.</p><Link className="public-button public-button-orange" to={quotePath}>Request a Quote <Icon name="arrow" /></Link></>}
+
+    <dialog ref={dialogRef} className="public-pattern-dialog public-expanded-details" onClose={() => setSelectedPattern(null)} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }} aria-labelledby="pattern-dialog-title">
+      {selectedPattern && <>
+        <button className="public-dialog-close" aria-label="Close pattern details" onClick={() => dialogRef.current.close()}><Icon name="close" /></button>
+        <div className="public-detail-overview"><div><PatternArt crop={selectedPattern} label={selectedPattern.title} /><p className="public-detail-caption">Illustrative pattern image</p></div><section><p className="public-eyebrow">Pattern capabilities</p><h2 id="pattern-dialog-title">{selectedPattern.title}</h2><p>{selectedPattern.description}</p><dl>{specificationRows.slice(1).map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section></div>
+        <p className="public-detail-description">{selectedPattern.detail}</p>
+        <Link className="public-button public-button-orange public-detail-action" to={quotePath}>Request for Quotation (RFQ) <Icon name="arrow" /></Link>
+        <button className="public-button public-button-outline public-detail-action" onClick={() => downloadSpecifications(selectedPattern.title, specificationRows)}>Download PDF Specifications <span aria-hidden="true">↓</span></button>
+        <p className="public-detail-caption">The PDF is a capability summary. Final specifications require confirmation in your quotation.</p>
+      </>}
     </dialog>
+
   </div>;
 }

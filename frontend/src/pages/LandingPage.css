@@ -168,3 +168,14 @@
   .public-footer > a:last-child { margin-left: 0; }
 }
 @media(prefers-reduced-motion: reduce) { .kpc-public * { scroll-behavior: auto !important; transition: none !important; } }
+.public-expanded-details { width: min(940px, calc(100% - 48px)); padding: 22px 28px; }
+.public-detail-overview { display: grid; grid-template-columns: 1.05fr 1fr; gap: 30px; align-items: start; }
+.public-expanded-details .pattern-art { margin: 0; aspect-ratio: 1.15 !important; }
+.public-detail-overview h2 { font-size: 26px; }
+.public-detail-overview section > p:not(.public-eyebrow) { margin-block: 15px; line-height: 1.6; }
+.public-detail-overview dl > div { display: flex; justify-content: space-between; gap: 20px; border-bottom: 1px solid #e0e5eb; padding: 10px 0; font-size: 12px; }
+.public-detail-overview dt { flex: 0 0 35%; }
+.public-detail-overview dd { margin: 0; }
+.public-detail-action { width: 100%; margin-top: 10px; min-height: 44px; }
+.public-expanded-details .public-detail-caption { color: #718092; font-size: 10px; margin: 10px 0 0; }
+.public-detail-description { margin: 20px 0 8px; color: #536376 !important; }
