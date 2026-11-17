@@ -28,6 +28,8 @@ class ProductSummaryResponse(BaseModel):
     indicative_price: Optional[float] = None
     is_active: bool
     category_id: Optional[int] = None
+    description: Optional[str] = None
+    category_name: Optional[str] = None
 
 
 class RFQCreateRequest(BaseModel):

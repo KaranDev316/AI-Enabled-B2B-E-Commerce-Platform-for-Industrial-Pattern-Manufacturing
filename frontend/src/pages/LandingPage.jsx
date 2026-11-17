@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import referenceImage from '../assets/landing-reference.webp';
 import './LandingPage.css';
+import { PublicHeader } from '../components/PublicHeader';
 
 const patterns = [
   { title: 'Precision Wood Patterns', description: 'High-quality wooden patterns crafted for traditional casting molds.', detail: 'Share your casting application, dimensions, material preferences, and drawings. Our team reviews your requirement before preparing a quotation.', x: 103, y: 582, width: 208, height: 103, icon: 'layers' },
@@ -44,11 +45,9 @@ function PatternArt({ crop, className = '', label }) {
 
 export function LandingPage() {
   const { user } = useAuth();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [activeCard, setActiveCard] = useState(0);
   const [selectedPattern, setSelectedPattern] = useState(null);
   const cardsRef = useRef(null);
-  const menuButtonRef = useRef(null);
   const dialogRef = useRef(null);
   const portal = user ? `/${user.role}` : '/login';
   const quotePath = '/customer';
@@ -57,12 +56,6 @@ export function LandingPage() {
     if (selectedPattern) dialogRef.current?.showModal();
   }, [selectedPattern]);
 
-  function closeMenu(event) {
-    if (event.key === 'Escape' && menuOpen) {
-      setMenuOpen(false);
-      menuButtonRef.current?.focus();
-    }
-  }
   function trackCard() {
     const rail = cardsRef.current;
     const cards = [...rail.children];
@@ -70,21 +63,9 @@ export function LandingPage() {
     setActiveCard(nearest);
   }
 
-  return <div className="kpc-public" onKeyDown={closeMenu}>
+  return <div className="kpc-public">
     <a className="public-skip" href="#main-content">Skip to content</a>
-    <header className="public-header">
-      <div className="public-container public-header-inner">
-        <Link className="public-logo" to="/" aria-label="Khodel Pattern Craft home"><strong><i>K</i>PC</strong><small>KHODEL PATTERN CRAFT</small></Link>
-        <button ref={menuButtonRef} className="public-menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="public-navigation"><Icon name={menuOpen ? 'close' : 'menu'} /></button>
-        <nav id="public-navigation" className={`public-navigation ${menuOpen ? 'is-open' : ''}`} aria-label="Main navigation" onClick={() => setMenuOpen(false)}>
-          <a href="#home" className="is-current" aria-current="page">Home</a>
-          <a href="#capabilities">Products</a>
-          <a href="#company">Company</a>
-          <a href="#contact">Contact</a>
-          <div className="public-nav-actions"><Link className="public-button public-button-outline" to={portal}>{user ? 'My Portal' : 'Login'}</Link><Link className="public-button public-button-orange" to={quotePath}>Get a Quote</Link></div>
-        </nav>
-      </div>
-    </header>
+    <PublicHeader />
     <main id="main-content">
       <section className="public-hero" id="home" aria-labelledby="hero-heading">
         <div className="public-container public-hero-inner">
@@ -92,7 +73,7 @@ export function LandingPage() {
             <p className="public-eyebrow">Precision. Reliability. Performance.</p>
             <h1 id="hero-heading">Precision Industrial<br className="desktop-break" /> Patterns, Delivered<br className="desktop-break" /> <em>On Time.</em></h1>
             <p className="public-hero-description">We manufacture high-precision wooden and metallic patterns for foundries. From CAD to casting-ready, we deliver quality you can trust.</p>
-            <div className="public-hero-actions"><Link className="public-button public-button-orange" to={quotePath}><Icon name="upload" /> Upload Your CAD / RFQ</Link><a className="public-button public-button-light" href="#capabilities">Explore Patterns</a></div>
+            <div className="public-hero-actions"><Link className="public-button public-button-orange" to={quotePath}><Icon name="upload" /> Upload Your CAD / RFQ</Link><Link className="public-button public-button-light" to="/products">View Catalogue</Link></div>
             <div className="public-proof">
               <div><Icon name="layers"/><p><strong>Wood & Metal</strong><span>Pattern manufacturing</span></p></div>
               <div><Icon name="document"/><p><strong>CAD to Pattern</strong><span>Built to your requirements</span></p></div>

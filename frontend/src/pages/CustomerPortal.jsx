@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { PortalLayout } from '../components/PortalLayout';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
@@ -31,6 +32,17 @@ export function CustomerPortal() {
   const [isRfqModalOpen, setIsRfqModalOpen] = useState(false);
   const [selectedRfqDetail, setSelectedRfqDetail] = useState(null);
   const [catalogueProducts, setCatalogueProducts] = useState([]);
+
+  const location = useLocation();
+  useEffect(() => {
+    const selected = new URLSearchParams(location.search).get('product');
+    if (!selected || !catalogueProducts.length) return;
+    const product = catalogueProducts.find(p => String(p.id) === selected);
+    if (!product) return;
+    setRfqForm(prev => ({ ...prev, rfq_type: 'standard', product_id: String(product.id), title: product.name, material: product.material_type || prev.material }));
+    setRfqStep(1);
+    setIsRfqModalOpen(true);
+  }, [location.search, catalogueProducts]);
 
   // File Attachments State (Slice S06)
   const [selectedFiles, setSelectedFiles] = useState([]);

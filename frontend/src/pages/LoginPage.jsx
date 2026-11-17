@@ -17,7 +17,8 @@ export function LoginPage() {
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
-  const from = location.state?.from?.pathname || null;
+  const requested = location.state?.from;
+  const from = requested?.pathname ? requested.pathname + (requested.search || '') : null;
 
   useEffect(() => {
     if (user) {

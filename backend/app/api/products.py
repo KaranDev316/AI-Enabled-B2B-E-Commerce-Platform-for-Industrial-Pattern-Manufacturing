@@ -19,4 +19,4 @@ def get_active_products(
         .order_by(Product.name.asc())
         .all()
     )
-    return products
+    return [ProductSummaryResponse.model_validate(p).model_copy(update={"category_name": p.category.name if p.category else None}) for p in products]

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles.css';
 
@@ -12,7 +12,17 @@ import { CustomerPortal } from './pages/CustomerPortal';
 import { EmployeePortal } from './pages/EmployeePortal';
 import { AdminPortal } from './pages/AdminPortal';
 
+import { CataloguePage } from './pages/CataloguePage';
 import { LandingPage } from './pages/LandingPage';
+
+function PublicNavigationScroll() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+    else window.scrollTo(0, 0);
+  }, [pathname, hash]);
+  return null;
+}
 
 function NotFound() {
   return (
@@ -30,8 +40,11 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <BrowserRouter>
+        <PublicNavigationScroll />
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/products" element={<CataloguePage />} />
+          <Route path="/products/:productId" element={<CataloguePage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
