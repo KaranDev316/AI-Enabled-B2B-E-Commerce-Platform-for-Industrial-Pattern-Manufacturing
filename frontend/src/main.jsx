@@ -13,7 +13,8 @@ import { EmployeePortal } from './pages/EmployeePortal';
 import { AdminPortal } from './pages/AdminPortal';
 
 import { Footer } from './components/Footer';
-import { LegalPage } from './pages/LegalPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { CataloguePage } from './pages/CataloguePage';
 import { LandingPage } from './pages/LandingPage';
 
@@ -73,8 +74,8 @@ createRoot(document.getElementById('root')).render(
               </ProtectedRoute>
             }
           />
-          <Route path="/privacy" element={<LegalPage title="Privacy Policy" />} />
-          <Route path="/terms" element={<LegalPage title="Terms" />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes></div><Footer /></div>
       </BrowserRouter>
