@@ -15,3 +15,11 @@ htmlcov/
 *.log
 backend/ml/*.joblib
 backend/ml/*.pkl
+*.db
+*.sqlite3
+*.sqlite
+frontend/dist/
+output.txt
+.private_storage/
+*.private_storage/
+

@@ -1,6 +1,80 @@
-:root { color: #082344; background: #f4f6fa; }
-body { color: #082344; background: #f4f6fa; }
-.workspace { max-width: 760px; background: white; border: 1px solid #dce3ed; border-radius: 16px; }
-.brand { font-size: 3rem; font-weight: 800; letter-spacing: -0.1rem; }
-.connection { border-left: 4px solid #ff8000; background: #fff4e8; }
-a { color: #074a9b; }
+:root {
+  --bs-font-sans-serif: "Bell MT", Georgia, "Times New Roman", serif;
+  --bs-body-font-family: "Bell MT", Georgia, "Times New Roman", serif;
+  color: #1e293b;
+  background-color: #f8fafc;
+}
+
+body {
+  font-family: "Bell MT", Georgia, "Times New Roman", serif !important;
+  font-size: 16.5px;
+  line-height: 1.55;
+  color: #2b3035 !important;
+  background-color: #f8fafc;
+}
+
+body, button, input, select, textarea, h1, h2, h3, h4, h5, h6, .card, .navbar, .btn, .table, .form-control, .badge, .alert {
+  font-family: "Bell MT", Georgia, "Times New Roman", serif !important;
+}
+
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  color: #0f172a !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+p, span, label, td, th {
+  color: #2b3035;
+}
+
+.text-muted, .text-secondary {
+  color: #475569 !important;
+}
+
+.workspace {
+  max-width: 820px;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+}
+
+.brand {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.05rem;
+  color: #0f2b48 !important;
+}
+
+.connection {
+  border-left: 4px solid #ea580c;
+  background: #fff7ed;
+  color: #7c2d12 !important;
+}
+
+a {
+  color: #0f52ba;
+}
+
+a:hover {
+  color: #0a367c;
+}
+
+.card {
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.table th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.table td {
+  vertical-align: middle;
+}
