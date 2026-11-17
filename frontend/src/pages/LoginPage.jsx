@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import './LandingPage.css';
+import './LoginPage.css';
+import referenceImage from '../assets/landing-reference.webp';
 
 export function LoginPage() {
   const location = useLocation();
@@ -63,103 +66,46 @@ export function LoginPage() {
   }
 
   return (
-    <div className="container py-5">
-      <div className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-5">
-          <div className="card shadow-sm border-0 rounded-4 p-4 p-md-5">
-            <div className="text-center mb-4">
-              <span className="brand d-block mb-1">KPC</span>
-              <span className="text-uppercase small text-muted">
-                Khodel Pattern Craft
-              </span>
-              <h2 className="h4 fw-bold mt-3">Portal Sign In</h2>
-              <p className="text-secondary small">
-                Sign in to access your Customer, Employee, or Admin workspace.
-              </p>
-            </div>
-
-            {localError && (
-              <div
-                className="alert alert-danger d-flex align-items-center small py-2 px-3 mb-4"
-                role="alert"
-              >
-                <div>{localError}</div>
+    <div className="kpc-public login-page">
+      <header className="public-header">
+        <div className="public-container public-header-inner">
+          <Link className="public-logo" to="/" aria-label="Khodel Pattern Craft home"><strong><i>K</i>PC</strong><small>KHODEL PATTERN CRAFT</small></Link>
+          <Link className="login-back" to="/">← Back to home</Link>
+        </div>
+      </header>
+      <main className="login-main">
+        <div className="login-shell">
+          <aside className="login-story" aria-labelledby="login-story-title">
+            <p className="public-eyebrow">Precision. Reliability. Performance.</p>
+            <h2 id="login-story-title">Your next pattern<br />starts <em>here.</em></h2>
+            <p>From your first drawing to a finished pattern. Keep your requirements and conversations together in your KPC workspace.</p>
+            <div className="login-pattern" role="img" aria-label="Precision machined metallic pattern"><img src={referenceImage} alt="" /></div>
+            <div className="login-story-footer"><span>WOODEN & METALLIC PATTERNS</span><span>Ahmedabad, Gujarat</span></div>
+          </aside>
+          <section className="login-form-panel" aria-labelledby="login-title">
+            <p className="public-eyebrow">Welcome to KPC</p>
+            <h1 id="login-title">Sign in to your workspace</h1>
+            <p className="login-intro">One secure sign-in for customers, employees, and Admin.</p>
+            {localError && <div className="login-error" id="login-error" role="alert">{localError}</div>}
+            <form onSubmit={handleSubmit} noValidate aria-busy={isSubmitting}>
+              <div className="login-field">
+                <label htmlFor="email">Work email address</label>
+                <input id="email" type="email" placeholder="name@company.com" value={email} onChange={e => setEmail(e.target.value)} autoComplete="username" required disabled={isSubmitting} aria-describedby={localError ? 'login-error' : undefined} />
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="mb-3">
-                <label className="form-label small fw-bold" htmlFor="email">
-                  Work Email Address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  className="form-control form-control-lg fs-6"
-                  placeholder="name@company.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="username"
-                  required
-                  disabled={isSubmitting}
-                />
+              <div className="login-field">
+                <label htmlFor="password">Password</label>
+                <input id="password" type="password" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" required disabled={isSubmitting} aria-describedby={localError ? 'login-error' : undefined} />
               </div>
-
-              <div className="mb-4">
-                <label className="form-label small fw-bold" htmlFor="password">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  className="form-control form-control-lg fs-6"
-                  placeholder="••••••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary btn-lg w-100 fw-bold fs-6 shadow-sm mb-3"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span
-                      className="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                    Authenticating…
-                  </>
-                ) : (
-                  'Sign In'
-                )}
+              <button type="submit" className="public-button public-button-orange login-submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Signing in…' : <>Sign In <span aria-hidden="true">→</span></>}
               </button>
             </form>
-
-            <div className="card bg-light border-0 p-3 mt-3 text-center rounded-3">
-              <p className="small text-secondary mb-2">New B2B Manufacturing Client?</p>
-              <Link to="/register" className="btn btn-outline-primary btn-sm fw-bold">
-                Register as B2B Customer →
-              </Link>
-            </div>
-
-            <div className="text-center mt-3 pt-3 border-top">
-              <Link to="/" className="text-decoration-none small text-secondary">
-                ← Return to Public Workspace
-              </Link>
-            </div>
-          </div>
-          <div className="text-center text-muted small mt-3">
-            Khodel Pattern Craft · Odhav GIDC, Ahmedabad · GSTIN: <span className="font-monospace fw-bold">24AAEFK7650C1ZM</span>
-          </div>
+            <div className="login-register"><p>New to Khodel Pattern Craft?</p><Link to="/register">Create a business account <span aria-hidden="true">→</span></Link></div>
+            <p className="login-access-note">Your account takes you to the workspace assigned to your role.</p>
+          </section>
         </div>
-      </div>
+      </main>
+      <footer className="login-footer"><span>Khodel Pattern Craft</span><span>Industrial pattern manufacturing · Ahmedabad, Gujarat</span></footer>
     </div>
   );
 }
