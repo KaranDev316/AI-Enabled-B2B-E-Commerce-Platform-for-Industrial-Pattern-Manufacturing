@@ -118,7 +118,7 @@ export function LandingPage() {
         </div><div className="public-contact-actions"><div className="public-contact-phones"><span>Call our team</span><a href="tel:+917922971570">79229 71570</a><a href="tel:+919979231737">99792 31737</a></div><Link className="public-button public-button-orange" to={quotePath}>Get a Quote <Icon name="arrow" /></Link><Link to={user ? portal : '/register'}>{user ? 'Go to my portal' : 'New to KPC? Create an account'}</Link></div></div>
       </section>
     </main>
-    <footer className="public-footer public-container"><Link className="public-logo" to="/" aria-label="Khodel Pattern Craft home"><strong><i>K</i>PC</strong><small>KHODEL PATTERN CRAFT</small></Link><p>Industrial pattern manufacturing<br/><span>Ahmedabad, Gujarat, India</span></p><a href="#home">Back to top ↑</a></footer>
+
 
     <dialog ref={dialogRef} className="public-pattern-dialog public-expanded-details" onClose={() => setSelectedPattern(null)} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }} aria-labelledby="pattern-dialog-title">
       {selectedPattern && <>

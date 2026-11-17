@@ -106,7 +106,7 @@ export function LoginPage() {
           </section>
         </div>
       </main>
-      <footer className="login-footer"><span>Khodel Pattern Craft</span><span>Industrial pattern manufacturing · Ahmedabad, Gujarat</span></footer>
+
     </div>
   );
 }

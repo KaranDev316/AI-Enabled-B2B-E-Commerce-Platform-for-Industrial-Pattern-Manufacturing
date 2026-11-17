@@ -12,6 +12,8 @@ import { CustomerPortal } from './pages/CustomerPortal';
 import { EmployeePortal } from './pages/EmployeePortal';
 import { AdminPortal } from './pages/AdminPortal';
 
+import { Footer } from './components/Footer';
+import { LegalPage } from './pages/LegalPage';
 import { CataloguePage } from './pages/CataloguePage';
 import { LandingPage } from './pages/LandingPage';
 
@@ -41,7 +43,7 @@ createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <BrowserRouter>
         <PublicNavigationScroll />
-        <Routes>
+        <div className="app-layout"><div className="app-content"><Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/products" element={<CataloguePage />} />
           <Route path="/products/:productId" element={<CataloguePage />} />
@@ -71,8 +73,10 @@ createRoot(document.getElementById('root')).render(
               </ProtectedRoute>
             }
           />
+          <Route path="/privacy" element={<LegalPage title="Privacy Policy" />} />
+          <Route path="/terms" element={<LegalPage title="Terms" />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
+        </Routes></div><Footer /></div>
       </BrowserRouter>
     </AuthProvider>
   </React.StrictMode>,

@@ -80,12 +80,6 @@
 .public-contact p:not(.public-eyebrow) { margin: 10px 0 0; color: #d3dfeb; font-size: 14px; }
 .public-contact-actions { display: flex; align-items: center; flex-direction: column; gap: 10px; }
 .public-contact-actions > a:last-child { font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
-.public-footer { padding-block: 27px; display: flex; align-items: center; gap: 35px; }
-.public-footer .public-logo strong { font-size: 36px; }
-.public-footer .public-logo small { font-size: 5px; }
-.public-footer p { font-size: 12px; margin: 0; }
-.public-footer p span { color: #637180; }
-.public-footer > a:last-child { font-size: 12px; margin-left: auto; }
 .public-pattern-dialog { color: #031d38; border: 1px solid #d6dee7; border-radius: 15px; width: min(520px,calc(100% - 32px)); padding: 25px; max-height: calc(100dvh - 40px); box-shadow: 0 24px 80px #0005; }
 .public-pattern-dialog::backdrop { background: #00172ec9; }
 .public-pattern-dialog .pattern-art { border-radius: 8px; margin: 15px 0 22px; }
@@ -164,8 +158,6 @@
   .public-company { grid-template-columns: 1fr; gap: 18px; padding-block: 30px; }
   .public-contact > div { flex-direction: column; align-items: flex-start; }
   .public-contact-actions { align-items: flex-start; }
-  .public-footer { flex-wrap: wrap; gap: 22px; }
-  .public-footer > a:last-child { margin-left: 0; }
 }
 @media(prefers-reduced-motion: reduce) { .kpc-public * { scroll-behavior: auto !important; transition: none !important; } }
 .public-expanded-details { width: min(940px, calc(100% - 48px)); padding: 22px 28px; }

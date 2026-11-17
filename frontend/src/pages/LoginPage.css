@@ -27,4 +27,3 @@
 .login-register a span { color: #e97400; margin-left: 7px; }
 .login-access-note { color: #718092 !important; font-size: 10px; text-align: center; line-height: 1.6; margin: 24px 0 0; }
 .login-error { background: #fff0ed; color: #a32d20; border: 1px solid #f5c8c0; border-radius: 5px; font-size: 13px; padding: 11px 13px; margin-bottom: 20px; }
-.login-footer { display: flex; justify-content: space-between; padding: 0 40px 22px; color: #697888; font-size: 11px; }
