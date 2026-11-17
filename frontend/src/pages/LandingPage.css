@@ -179,3 +179,15 @@
 .public-detail-action { width: 100%; margin-top: 10px; min-height: 44px; }
 .public-expanded-details .public-detail-caption { color: #718092; font-size: 10px; margin: 10px 0 0; }
 .public-detail-description { margin: 20px 0 8px; color: #536376 !important; }
+.public-company-tagline { margin-top: 15px; }
+.public-company-facts { margin: 20px 0 24px; }
+.public-company-facts > div { display: grid; grid-template-columns: 145px 1fr; gap: 20px; padding: 10px 0; border-bottom: 1px solid #e4e9ee; font-size: 13px; }
+.public-company-facts dt { font-weight: 700; }
+.public-company-facts dd { margin: 0; color: #4b5766; }
+.public-contact-address { font-size: 14px; line-height: 1.8; margin: 25px 0 0; color: #d3dfeb; font-style: normal; }
+.public-contact-address strong { display: inline-block; margin-bottom: 5px; color: white; }
+.public-contact-phones { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.public-contact-phones span { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #d3dfeb; }
+.public-contact-phones a { font-size: 23px; font-weight: 700; }
+.public-contact-phones a:hover { color: #ff9c40; }
+.public-contact-grid .public-contact-actions { align-items: flex-start; min-width: 270px; }

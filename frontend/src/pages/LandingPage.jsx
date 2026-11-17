@@ -105,8 +105,18 @@ export function LandingPage() {
         <div className="public-section-heading"><p className="public-eyebrow">Our simple process</p><h2 id="process-heading">From CAD to Casting-Ready</h2></div>
         <ol className="public-process-list">{steps.map((step, i) => <li key={step.title}><div className="public-step-top"><span className="public-step-number">0{i + 1}</span><span className="public-step-icon"><Icon name={step.icon} /></span></div><div className="public-step-copy"><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}</ol>
       </div></section>
-      <section className="public-company public-container" id="company" aria-labelledby="company-heading"><div><p className="public-eyebrow">Khodel Pattern Craft</p><h2 id="company-heading">Your pattern. Our craft.</h2></div><div><p>Based in Ahmedabad, Gujarat, KPC manufactures industrial wooden and metallic patterns. We bring your drawings, specifications, and manufacturing requirements together in one clear quotation process.</p><Link className="public-detail-link" to={quotePath}>Tell us about your requirement <Icon name="arrow" /></Link></div></section>
-      <section className="public-contact" id="contact" aria-labelledby="contact-heading"><div className="public-container"><div><p className="public-eyebrow">Let’s build your next pattern</p><h2 id="contact-heading">Have a drawing or a requirement?</h2><p>Sign in to share your specifications with the KPC team.</p></div><div className="public-contact-actions"><Link className="public-button public-button-orange" to={quotePath}>Get a Quote <Icon name="arrow" /></Link><Link to={user ? portal : '/register'}>{user ? 'Go to my portal' : 'New to KPC? Create an account'}</Link></div></div></section>
+      <section className="public-company public-container" id="company" aria-labelledby="company-heading" tabIndex={-1}>
+        <div><p className="public-eyebrow">Company profile</p><h2 id="company-heading">Khodel Pattern Craft</h2><p className="public-company-tagline">Your pattern. Our craft.</p></div>
+        <div><p>Based in Odhav, Ahmedabad, Khodel Pattern Craft manufactures industrial wooden and metallic patterns. We bring your drawings, specifications, and manufacturing requirements together in one clear quotation process.</p>
+          <dl className="public-company-facts"><div><dt>Nature of work</dt><dd>Industrial pattern manufacturing</dd></div><div><dt>Products</dt><dd>Wooden and metallic patterns</dd></div><div><dt>GSTIN</dt><dd>24AAEFK7650C1ZM</dd></div></dl>
+          <Link className="public-detail-link" to="/products">Explore our catalogue <Icon name="arrow" /></Link>
+        </div>
+      </section>
+      <section className="public-contact" id="contact" aria-labelledby="contact-heading" tabIndex={-1}>
+        <div className="public-container public-contact-grid"><div><p className="public-eyebrow">Contact Khodel Pattern Craft</p><h2 id="contact-heading">Let’s discuss your next pattern.</h2><p>Call our team or share your drawings through a quotation request.</p>
+          <address className="public-contact-address"><strong>Visit us</strong><br />L/564, G.I.D.C. Estate, Odhav,<br />Ahmedabad – 382415, Gujarat, India</address>
+        </div><div className="public-contact-actions"><div className="public-contact-phones"><span>Call our team</span><a href="tel:+917922971570">79229 71570</a><a href="tel:+919979231737">99792 31737</a></div><Link className="public-button public-button-orange" to={quotePath}>Get a Quote <Icon name="arrow" /></Link><Link to={user ? portal : '/register'}>{user ? 'Go to my portal' : 'New to KPC? Create an account'}</Link></div></div>
+      </section>
     </main>
     <footer className="public-footer public-container"><Link className="public-logo" to="/" aria-label="Khodel Pattern Craft home"><strong><i>K</i>PC</strong><small>KHODEL PATTERN CRAFT</small></Link><p>Industrial pattern manufacturing<br/><span>Ahmedabad, Gujarat, India</span></p><a href="#home">Back to top ↑</a></footer>
 

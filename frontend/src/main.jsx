@@ -16,11 +16,11 @@ import { CataloguePage } from './pages/CataloguePage';
 import { LandingPage } from './pages/LandingPage';
 
 function PublicNavigationScroll() {
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, key } = useLocation();
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
     else window.scrollTo(0, 0);
-  }, [pathname, hash]);
+  }, [pathname, hash, key]);
   return null;
 }
 
