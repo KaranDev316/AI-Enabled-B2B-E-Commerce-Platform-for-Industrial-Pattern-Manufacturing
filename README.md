@@ -108,6 +108,7 @@ Complete native setup on each developer's computer, verify CI and PostgreSQL con
 
 ## Reference documentation
 
+- [UI/UX screen index](docs/ui-ux/README.md) — 28 original mockups covering the public site, Admin, Customer, Employee, and shared UI components. Use these for visual reference within the approved project scope.
 - [Vite development server/proxy](https://vite.dev/config/server-options)
 - [FastAPI first steps](https://fastapi.tiangolo.com/tutorial/first-steps/)
 - [Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
