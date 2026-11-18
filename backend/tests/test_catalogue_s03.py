@@ -18,5 +18,7 @@ def test_public_catalogue_hides_inactive_products(client, db_session):
     assert public['category_name'] == 'S03 patterns'
     assert public['description'] == 'Stored description'
     assert client.get('/api/products/s03-public').json() == public
+    assert client.get(f"/api/products/{public['id']}").json() == public
+    assert client.get('/api/products/999999999999999999999').status_code == 404
     assert client.get('/api/products/s03-hidden').status_code == 404
     assert client.get('/api/products/s03-unknown').status_code == 404

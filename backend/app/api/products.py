@@ -29,6 +29,10 @@ def get_active_products(
 def get_product(slug: str, db: DBSession = Depends(get_db)):
     product = (db.query(Product).options(joinedload(Product.category), selectinload(Product.images))
                .filter(Product.slug == slug, Product.is_active.is_(True)).first())
+    # Keep existing numeric /products/:id links working while slugs are canonical.
+    if product is None and slug.isdecimal() and len(slug) <= 10 and int(slug) <= 2147483647:
+        product = (db.query(Product).options(joinedload(Product.category), selectinload(Product.images))
+                   .filter(Product.id == int(slug), Product.is_active.is_(True)).first())
     if product is None:
         raise HTTPException(status_code=404, detail='Product not found or no longer available')
     return product

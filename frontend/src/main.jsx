@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles.css';
 
@@ -11,7 +11,19 @@ import { RegisterPage } from './pages/RegisterPage';
 import { CustomerPortal } from './pages/CustomerPortal';
 import { EmployeePortal } from './pages/EmployeePortal';
 import { AdminPortal } from './pages/AdminPortal';
+import { Footer } from './components/Footer';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { PublicHome, CataloguePage, ProductPage } from './pages/PublicCatalogue';
+
+function PublicNavigationScroll() {
+  const { pathname, hash, key } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
+    else window.scrollTo(0, 0);
+  }, [pathname, hash, key]);
+  return null;
+}
 
 function NotFound() {
   return (
@@ -19,7 +31,7 @@ function NotFound() {
       <h1 className="h3 mb-3">Page Not Found</h1>
       <p className="text-secondary mb-4">The requested portal route does not exist.</p>
       <Link to="/" className="btn btn-primary btn-sm">
-        Return to Workspace
+        Return to Home
       </Link>
     </main>
   );
@@ -29,9 +41,11 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
+        <PublicNavigationScroll />
+        <div className="app-layout"><div className="app-content"><Routes>
           <Route path="/" element={<PublicHome />} />
           <Route path="/catalogue" element={<CataloguePage />} />
+          <Route path="/products" element={<CataloguePage />} />
           <Route path="/products/:slug" element={<ProductPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -59,8 +73,10 @@ createRoot(document.getElementById('root')).render(
               </ProtectedRoute>
             }
           />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
+        </Routes></div><Footer /></div>
       </BrowserRouter>
     </AuthProvider>
   </React.StrictMode>,

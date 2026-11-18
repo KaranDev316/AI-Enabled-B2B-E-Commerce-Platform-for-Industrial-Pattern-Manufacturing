@@ -1,0 +1,12 @@
+.privacy-page { max-width: 940px; padding-block: 48px 60px; }
+.kpc-public .privacy-page h1 { font-size: 36px; color: var(--public-navy) !important; font-weight: 750; letter-spacing: -.8px; }
+.privacy-page .privacy-date { font-size: 12px; color: #667689; margin: 15px 0 28px; }
+.privacy-page p { font-size: 14px; line-height: 1.85; color: #435366; }
+.privacy-page section { margin-top: 32px; }
+.kpc-public .privacy-page h2 { font-size: 20px; margin-bottom: 14px; }
+.privacy-table-wrap { overflow-x: auto; }
+.privacy-page table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.privacy-page caption { caption-side: top; font-size: 12px; padding: 0 0 12px; color: #667689; }
+.privacy-page th, .privacy-page td { padding: 16px; border: 1px solid #dce3ea; vertical-align: top; line-height: 1.7; color: #435366; }
+.privacy-page th { background: #edf2f6; color: #031d38; }
+.privacy-page td:first-child { width: 55%; }

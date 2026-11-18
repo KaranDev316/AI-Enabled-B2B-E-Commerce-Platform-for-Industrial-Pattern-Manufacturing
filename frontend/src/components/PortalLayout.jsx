@@ -13,7 +13,7 @@ export function PortalLayout({ title, subtitle, roleBadgeColor = 'primary', side
   }
 
   const content = (
-    <div className="d-flex flex-column min-vh-100 bg-light">
+    <div className="d-flex flex-column portal-content bg-light">
       {/* Top Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-3 px-lg-4 shadow-sm border-bottom border-secondary">
         <div className="container-fluid">
@@ -60,13 +60,7 @@ export function PortalLayout({ title, subtitle, roleBadgeColor = 'primary', side
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="footer py-3 bg-white border-top text-center text-muted small mt-auto px-3">
-        <div className="container-fluid d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
-          <span>KPC — Khodel Pattern Craft · Odhav GIDC, Ahmedabad, Gujarat · GSTIN: <strong className="font-monospace text-dark">24AAEFK7650C1ZM</strong></span>
-          <span>B2B Industrial Pattern Manufacturing Platform</span>
-        </div>
-      </footer>
+
     </div>
   );
   return sidebarItems ? <SidebarShell title={user?.role === 'admin' ? 'Administration' : 'Customer workspace'} items={sidebarItems} activeSection={activeSection} onSectionChange={onSectionChange}>{content}</SidebarShell> : content;

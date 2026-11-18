@@ -1,0 +1,7 @@
+.public-site-header-inner { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 78px; gap: 24px; }
+.public-site-header .public-logo { justify-self: start; }
+.public-site-navigation { display: flex; justify-content: center; align-items: center; gap: 36px; height: 100%; font-size: 14px; font-weight: 600; }
+.public-site-navigation a { position: relative; display: flex; align-items: center; height: 100%; white-space: nowrap; }
+.public-site-navigation a:hover { color: #bc5300; }
+.public-site-navigation a[aria-current='page']::after { content: ''; position: absolute; bottom: 8px; left: -8px; right: -8px; height: 3px; background: #ff7a00; }
+.public-site-actions { display: flex; gap: 16px; justify-self: end; }

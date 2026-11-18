@@ -27,6 +27,7 @@ async function build() {
     bundle: true,
     outfile: 'dist/assets/index.js',
     format: 'esm',
+    publicPath: '/assets',
     target: 'es2022',
     loader: {
       '.js': 'jsx',
@@ -34,6 +35,7 @@ async function build() {
       '.png': 'dataurl',
       '.jpg': 'dataurl',
       '.svg': 'text',
+      '.webp': 'file',
     },
     define: {
       'process.env.NODE_ENV': '"production"',
@@ -49,8 +51,8 @@ async function build() {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="KPC final-year BCA project development workspace" />
-    <title>KPC — Development Workspace</title>
+    <meta name="description" content="Khodel Pattern Craft — industrial wooden and metallic pattern manufacturing in Ahmedabad, Gujarat. Share your drawings and request a quotation." />
+    <title>KPC — Precision Industrial Patterns</title>
     <script type="module" crossorigin src="/assets/index.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index.css">
   </head>

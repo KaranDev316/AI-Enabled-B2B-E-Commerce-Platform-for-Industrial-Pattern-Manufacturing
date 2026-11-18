@@ -1,0 +1,38 @@
+.app-layout { min-height: 100vh; display: flex; flex-direction: column; }
+.app-content { flex: 1; }
+.kpc-public.site-footer { background: #02172c; color: #e1e8ef; border-top: 1px solid #ffffff26; }
+.site-footer-main { display: grid; grid-template-columns: repeat(3, minmax(160px, 220px)); column-gap: 64px; row-gap: 26px; justify-content: start; padding-block: 26px; }
+.site-footer-links { display: contents; }
+.kpc-public.site-footer h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #ff9b3d !important; margin: 0 0 16px; }
+.site-footer ul { list-style: none; margin: 0; padding: 0; }
+.site-footer a { font-size: 12px; line-height: 1.8; }
+.site-footer li a, .site-footer-contact > a { display: block; padding-block: 4px; width: fit-content; }
+.site-footer-contact address { margin: 0 0 9px; font-style: normal; }
+.kpc-public.site-footer a:hover, .site-footer button:hover { color: #ff9b3d; }
+.site-footer :is(a,button):focus-visible { outline: 2px solid #ff9b3d; outline-offset: 4px; border-radius: 2px; }
+.site-footer-bottom { border-top: 1px solid #ffffff24; }
+.site-footer-bottom > div { display: flex; gap: 25px; justify-content: space-between; align-items: center; padding-block: 16px; }
+.site-footer-bottom p { font-size: 11px; margin: 0; }
+.site-footer-legal { display: flex; gap: 22px; margin-left: auto; }
+.site-footer-bottom button { border: 0; background: transparent; padding: 8px 0; color: inherit; font-size: 12px; }
+.legal-placeholder { padding-block: 60px 80px; max-width: 800px; }
+.legal-placeholder h1 { color: #031d38 !important; font-size: 32px; }
+.legal-placeholder p { color: #536376; margin-block: 20px; line-height: 1.8; }
+@media (min-width: 601px) and (max-width: 1000px) {
+  .site-footer-main { grid-template-columns: repeat(2, minmax(160px, 220px)); column-gap: 64px; row-gap: 26px; }
+  .site-footer-links { display: contents; }
+  .site-footer-bottom > div { flex-wrap: wrap; }
+}
+@media (max-width: 600px) {
+  .site-footer-main { display: flex; flex-direction: column; gap: 22px; padding-block: 24px; }
+  .site-footer-contact { order: -2; }
+  .site-footer-links { display: contents; }
+  .site-footer-links section { order: -1; }
+  .site-footer :is(a,button) { min-height: 44px; display: inline-flex; align-items: center; }
+  .site-footer-contact > a { display: flex; }
+  .site-footer-bottom > div { flex-direction: column; text-align: center; gap: 8px; }
+  .site-footer-legal { margin-left: 0; justify-content: center; }
+}
+
+/* Public-page wrappers fill a viewport; the shared footer must not. */
+.kpc-public.site-footer { min-height: 0; }

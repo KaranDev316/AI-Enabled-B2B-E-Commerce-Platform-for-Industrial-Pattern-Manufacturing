@@ -1,0 +1,23 @@
+import React from 'react';
+import { PublicHeader } from '../components/PublicHeader';
+import './PrivacyPage.css';
+
+const information = [
+  ['Accounts and business profiles', 'Test account email, name, role, and login credentials. Sample business profiles may include a company name, contact person, phone number, address, and GSTIN.', 'To sign in, demonstrate the customer, employee, and Admin portals, and control access.'],
+  ['RFQs, drawings, and support', 'Sample requests for quotation, specifications, drawings, support messages, and attachments.', 'To demonstrate submitting and reviewing requirements, handling related files, and responding to support inquiries.'],
+  ['Sessions and technical records', 'Session cookies and related session records. Hosting services may record technical information such as IP address, request time, and errors.', 'To keep users signed in, operate the site, and diagnose technical problems.'],
+  ['Demonstration transactions', 'Sample quotations, orders, invoices, and simulated payments, where those features are enabled.', 'To demonstrate the workflow. The demo does not process real payments or request card, bank, or UPI credentials.'],
+];
+export function PrivacyPage() {
+  return <div className="kpc-public"><PublicHeader /><main className="public-container privacy-page">
+    <p className="public-eyebrow">Khodel Pattern Craft</p><h1>Privacy Policy</h1><p className="privacy-date">Academic demonstration notice · Effective <time dateTime="2026-11-17">17 November 2026</time></p>
+    <p>Website: <a href="https://ai-enabled-b2-b-e-commerce-platform.vercel.app/">ai-enabled-b2-b-e-commerce-platform.vercel.app</a><br/>Project team contact: <a href="mailto:karanlicka@gmail.com">karanlicka@gmail.com</a></p>
+    <p>This website is a final-year BCA project that demonstrates workflows for Khodel Pattern Craft (KPC), an industrial pattern manufacturer. The project team operates this demonstration for development, testing, and academic evaluation. The site is intended for invited team members, faculty, and evaluators using test accounts and sample records.</p>
+    <section aria-labelledby="privacy-data"><h2 id="privacy-data">What the demonstration uses</h2><div className="privacy-table-wrap"><table><caption>Information used in the academic demonstration and its purpose</caption><thead><tr><th scope="col">Information</th><th scope="col">Why it is used</th></tr></thead><tbody>{information.map(([title,details,purpose]) => <tr key={title}><td><strong>{title}</strong><br/>{details}</td><td>{purpose}</td></tr>)}</tbody></table></div></section>
+    <section aria-labelledby="privacy-sample"><h2 id="privacy-sample">Use sample information only</h2><p>Use the supplied demo credentials or synthetic details. Please keep real names, personal contact details, customer records, government IDs, payment credentials, and confidential CAD drawings out of the demo. Use a test password that you do not use elsewhere.</p><p>If you accidentally submit real information, contact the project team promptly so the submission can be identified and its removal arranged.</p></section>
+    <section aria-labelledby="privacy-access"><h2 id="privacy-access">Who may handle demo data</h2><p>Authorized project team members and hosting or storage providers may handle demo data to operate and troubleshoot the site. Faculty and evaluators may see sample records during demonstrations.</p></section>
+    <section aria-labelledby="privacy-session"><h2 id="privacy-session">Session cookies</h2><p>Project accounts use a session cookie for sign-in. It maintains your authenticated session while you use account features. Sign out when you finish, especially on a shared computer.</p></section>
+    <section aria-labelledby="privacy-retention"><h2 id="privacy-retention">Retention and requests</h2><p>The team keeps test data for development and academic evaluation. For corrections, removal requests, or questions about a submission, email the project team at <a href="mailto:karanlicka@gmail.com">karanlicka@gmail.com</a>.</p><p>Include the relevant test account or submission reference. Leave out passwords and confidential files.</p><a className="public-detail-link" href="mailto:karanlicka@gmail.com">Email the project team →</a></section>
+    <section aria-labelledby="privacy-business"><h2 id="privacy-business">About this notice</h2><p>This notice applies to the academic demonstration. It does not describe an approved live business service. If the website moves to real customer use, the notice must be updated to reflect its actual operator, contact process, providers, retention practices, and data handling.</p></section>
+  </main></div>;
+}
