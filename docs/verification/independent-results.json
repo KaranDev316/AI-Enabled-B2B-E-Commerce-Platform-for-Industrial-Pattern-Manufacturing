@@ -1,0 +1,164 @@
+[
+  {
+    "name": "registration persists user and owned profile",
+    "passed": true,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "login a",
+    "passed": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "name": "login b",
+    "passed": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "name": "cookie attributes",
+    "passed": true,
+    "detail": "HttpOnly and SameSite=Lax on local HTTP"
+  },
+  {
+    "name": "duplicate registration rejected",
+    "passed": true,
+    "detail": "HTTP 409"
+  },
+  {
+    "name": "blank required business details rejected",
+    "passed": false,
+    "detail": "HTTP 201; whitespace-only values"
+  },
+  {
+    "name": "public role escalation rejected",
+    "passed": true,
+    "detail": "HTTP 422"
+  },
+  {
+    "name": "customer denied admin data",
+    "passed": true,
+    "detail": "HTTP 403"
+  },
+  {
+    "name": "anonymous denied RFQs",
+    "passed": true,
+    "detail": "HTTP 401"
+  },
+  {
+    "name": "cross-session CSRF cannot mutate",
+    "passed": true,
+    "detail": "HTTP 403"
+  },
+  {
+    "name": "untrusted origin cannot mutate",
+    "passed": true,
+    "detail": "HTTP 403"
+  },
+  {
+    "name": "custom RFQ stored on PostgreSQL",
+    "passed": true,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "cross-customer RFQ read denied",
+    "passed": true,
+    "detail": "HTTP 403"
+  },
+  {
+    "name": "PNG upload and download preserve bytes",
+    "passed": true,
+    "detail": "upload 201, download 200"
+  },
+  {
+    "name": "cross-customer file denied",
+    "passed": true,
+    "detail": "HTTP 403"
+  },
+  {
+    "name": "non-CAD text masquerading as IGES rejected",
+    "passed": false,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "arbitrary bytes masquerading as STL rejected",
+    "passed": false,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "Unicode filename remains downloadable",
+    "passed": false,
+    "detail": "upload 201, download 500"
+  },
+  {
+    "name": "support ticket stored",
+    "passed": true,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "cross-customer support reply denied",
+    "passed": true,
+    "detail": "HTTP 403"
+  },
+  {
+    "name": "blank support content rejected",
+    "passed": false,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "overlength profile rejected with validation",
+    "passed": false,
+    "detail": "HTTP 500"
+  },
+  {
+    "name": "admin reset succeeds",
+    "passed": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "name": "reset revokes old session",
+    "passed": true,
+    "detail": "HTTP 401"
+  },
+  {
+    "name": "reset login requires password change",
+    "passed": true,
+    "detail": "HTTP 200"
+  },
+  {
+    "name": "mandatory password change blocks business mutation",
+    "passed": false,
+    "detail": "HTTP 201"
+  },
+  {
+    "name": "concurrent uploads respect two-file invariant",
+    "passed": true,
+    "detail": {
+      "statuses": [
+        201,
+        400,
+        201,
+        400,
+        400,
+        400
+      ],
+      "persisted_files": 2
+    }
+  },
+  {
+    "name": "overlapping upload transactions enforce two-file limit",
+    "passed": false,
+    "detail": "3 files persisted from three real PostgreSQL transactions; barrier before real storage writes"
+  },
+  {
+    "name": "concurrent independent ticket submissions succeed",
+    "passed": false,
+    "detail": [
+      201,
+      201,
+      201,
+      500,
+      500,
+      500
+    ]
+  }
+]
