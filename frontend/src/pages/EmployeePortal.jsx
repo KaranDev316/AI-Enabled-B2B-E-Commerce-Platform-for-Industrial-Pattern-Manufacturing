@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { PortalLayout } from '../components/PortalLayout';
+import { EmployeeLayout, EmployeeIcon as Icon, employeePages } from '../components/EmployeeLayout';
+import { EmployeeDashboard, EmployeeTasks, EmployeeIssue } from '../components/EmployeeWork';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function EmployeePortal() {
   const { user, csrfToken } = useAuth();
+  const [activeTab, setActiveTab] = useState(() => { const tab = new URLSearchParams(window.location.search).get('tab'); return employeePages.some(page => page.id === tab) ? tab : 'dashboard'; });
+  function navigateTab(tab) {
+    setActiveTab(tab); setFeedback({ error: '', success: '' });
+    const url = new URL(window.location.href); url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url); window.scrollTo(0, 0);
+  }
   const [profile, setProfile] = useState(user?.employee_profile || {});
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -26,6 +33,8 @@ export function EmployeePortal() {
   async function handleSaveProfile(e) {
     e.preventDefault();
     setFeedback({ error: '', success: '' });
+    if (saveLoading) return;
+    if (editData.full_name.trim().length < 2) { setFeedback({ error: 'Enter your full name using at least 2 characters.', success: '' }); return; }
     setSaveLoading(true);
 
     try {
@@ -47,7 +56,7 @@ export function EmployeePortal() {
       const updatedUser = await response.json();
       setProfile(updatedUser.employee_profile);
       setIsEditing(false);
-      setFeedback({ error: '', success: 'Staff details updated successfully!' });
+      setFeedback({ error: '', success: 'Your profile has been updated.' });
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     } finally {
@@ -55,170 +64,25 @@ export function EmployeePortal() {
     }
   }
 
-  return (
-    <PortalLayout
-      title="Employee Workspace"
-      subtitle="Shop Floor & Pattern Manufacturing Execution · Khodel Pattern Craft"
-      roleBadgeColor="info text-dark"
-    >
-      {user?.must_change_password && (
-        <div className="alert alert-warning border-warning shadow-sm rounded-3 mb-4 d-flex justify-content-between align-items-center">
-          <div>
-            <strong>Temporary Password Active:</strong> Your account was created with a temporary password by the Administrator. Please set your personal secure password now.
-          </div>
-          <button
-            onClick={() => setIsPasswordModalOpen(true)}
-            className="btn btn-warning btn-sm fw-bold ms-3"
-          >
-            Update Password
-          </button>
-        </div>
-      )}
+  function startEditing() {
+    setEditData({ full_name: profile.full_name || '', phone: profile.phone || '' });
+    setIsEditing(true);
+  }
 
-      {feedback.success && (
-        <div className="alert alert-success alert-dismissible fade show small py-2" role="alert">
-          {feedback.success}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setFeedback({ ...feedback, success: '' })}
-          ></button>
-        </div>
-      )}
-
-      {feedback.error && (
-        <div className="alert alert-danger alert-dismissible fade show small py-2" role="alert">
-          {feedback.error}
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setFeedback({ ...feedback, error: '' })}
-          ></button>
-        </div>
-      )}
-
-      <div className="row g-4">
-        {/* Employee Info Card */}
-        <div className="col-12 col-lg-5">
-          <div className="card shadow-sm border-0 rounded-3 h-100">
-            <div className="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-              <h5 className="card-title h6 mb-0 fw-bold">Employee Record</h5>
-              {!isEditing && (
-                <button
-                  onClick={() => {
-                    setEditData({
-                      full_name: profile?.full_name || '',
-                      phone: profile?.phone || '',
-                    });
-                    setIsEditing(true);
-                  }}
-                  className="btn btn-outline-primary btn-sm"
-                >
-                  Edit Contact
-                </button>
-              )}
-            </div>
-
-            <div className="card-body">
-              {isEditing ? (
-                <form onSubmit={handleSaveProfile}>
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold mb-1">Full Staff Name</label>
-                    <input
-                      name="full_name"
-                      type="text"
-                      className="form-control form-control-sm"
-                      value={editData.full_name}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="form-label small fw-bold mb-1">Phone Number</label>
-                    <input
-                      name="phone"
-                      type="tel"
-                      className="form-control form-control-sm"
-                      value={editData.phone}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-
-                  <div className="d-flex gap-2">
-                    <button
-                      type="submit"
-                      className="btn btn-primary btn-sm fw-bold"
-                      disabled={saveLoading}
-                    >
-                      {saveLoading ? 'Saving…' : 'Save Details'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary btn-sm"
-                      onClick={() => setIsEditing(false)}
-                      disabled={saveLoading}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div>
-                  <p className="mb-1 text-secondary small">Staff Member</p>
-                  <h6 className="fw-bold mb-3">{profile?.full_name || 'KPC Production Staff'}</h6>
-
-                  <p className="mb-1 text-secondary small">Work Email</p>
-                  <p className="mb-3">{user?.email}</p>
-
-                  <p className="mb-1 text-secondary small">Phone Number</p>
-                  <p className="mb-3">{profile?.phone || 'Not provided'}</p>
-
-                  <p className="mb-1 text-secondary small">Department (Admin Assigned)</p>
-                  <p className="mb-4">
-                    <span className="badge bg-light text-dark border">
-                      {profile?.department || 'Pattern Tooling & Machining'}
-                    </span>
-                  </p>
-
-                  <div className="border-top pt-3">
-                    <button
-                      onClick={() => setIsPasswordModalOpen(true)}
-                      className="btn btn-outline-secondary btn-sm w-100"
-                    >
-                      Change Account Password
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Manufacturing Execution Overview */}
-        <div className="col-12 col-lg-7">
-          <div className="card shadow-sm border-0 rounded-3 p-4">
-            <h5 className="h6 fw-bold mb-3">Assigned Production Tasks (S10 / S12)</h5>
-            <p className="text-secondary small mb-4">
-              Employees inspect assigned jobs, view authorized pattern CAD drawings, log stage transitions
-              (Design & Tooling → Machining/Production), and submit completed patterns for Admin Quality Review.
-            </p>
-
-            <div className="alert alert-light border rounded-3 p-3">
-              <h6 className="fw-bold mb-1 small text-dark">Stage History & Rework Contract</h6>
-              <p className="small text-muted mb-0">
-                Every stage update is recorded in <code>job_stage_history</code> with actor timestamp.
-                Quality check rejections by Admin require a rework note and reset progress to Machining.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <PasswordChangeModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-      />
-    </PortalLayout>
-  );
+  const initials = (profile.full_name || 'Employee').split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+  return <EmployeeLayout activeTab={activeTab} onNavigate={navigateTab} profile={profile}>
+    {user.must_change_password && <div className="alert alert-warning employee-password-notice" role="alert"><div><strong>Update your temporary password</strong><p>Your Administrator created this account. Set your own password to secure it.</p></div><button className="btn btn-primary" onClick={() => setIsPasswordModalOpen(true)}>Update Password</button></div>}
+    {feedback.success && <div className="alert alert-success alert-dismissible" role="status">{feedback.success}<button className="btn-close" aria-label="Dismiss success message" onClick={() => setFeedback({ ...feedback, success: '' })}/></div>}
+    {feedback.error && <div className="alert alert-danger alert-dismissible" role="alert">{feedback.error}<button className="btn-close" aria-label="Dismiss error message" onClick={() => setFeedback({ ...feedback, error: '' })}/></div>}
+    {activeTab === 'dashboard' && <EmployeeDashboard onNavigate={navigateTab}/>}
+    {activeTab === 'tasks' && <EmployeeTasks/>}
+    {activeTab === 'completed' && <EmployeeTasks completed/>}
+    {activeTab === 'issue' && <EmployeeIssue/>}
+    {activeTab === 'profile' && <>
+      <div className="employee-profile-toolbar">{!isEditing && <button className="btn btn-outline-primary" onClick={startEditing}><Icon name="profile" size={18}/> Edit Profile</button>}</div>
+      <div className="employee-profile-grid"><section className="card employee-personal-card"><div className="employee-profile-identity"><span className="employee-avatar large">{initials}</span><div><h2>{profile.full_name || 'Employee'}</h2><p>{profile.department || 'Department not assigned'}</p><span className="employee-active-badge">{user.is_active ? 'Active' : 'Inactive'}</span></div></div><div className="employee-personal-body"><h3>Personal Information</h3><form onSubmit={handleSaveProfile}><div className="employee-form-grid"><label>Full Name{isEditing && <span className="customer-required"> *</span>}<input className="form-control" name="full_name" autoComplete="name" value={isEditing ? editData.full_name : profile.full_name || ''} onChange={handleInputChange} readOnly={!isEditing} required minLength={2} maxLength={255} disabled={saveLoading}/></label><label>Employee ID<input className="form-control" value={String(user.id)} readOnly/></label><label className="employee-field-wide">Email<input className="form-control" type="email" value={user.email} readOnly/></label><label className="employee-field-wide">Phone<input className="form-control" type="tel" name="phone" autoComplete="tel" value={isEditing ? editData.phone : profile.phone || ''} onChange={handleInputChange} readOnly={!isEditing} maxLength={50} placeholder="Not provided" disabled={saveLoading}/></label></div>{isEditing && <div className="employee-profile-actions"><button className="btn btn-outline-primary" type="button" onClick={() => setIsEditing(false)} disabled={saveLoading}>Cancel</button><button className="btn btn-primary" type="submit" disabled={saveLoading}>{saveLoading ? 'Saving…' : 'Save Changes'}</button></div>}</form></div></section>
+      <div className="employee-profile-side"><section className="card"><div className="customer-section-header"><h2><Icon name="company"/> Employment Details</h2></div><div className="employee-employment"><dl><div><dt>Department</dt><dd>{profile.department || 'Not assigned'}</dd></div><div><dt>Account role</dt><dd>Employee</dd></div></dl><p>Employment details are assigned by your Administrator.</p></div></section><section className="card"><div className="customer-section-header"><h2><Icon name="lock"/> Account & Security</h2></div><div className="employee-security"><div><h3>Password</h3><p>Changing your password signs you out of existing sessions.</p></div><button className="btn btn-outline-primary" onClick={() => setIsPasswordModalOpen(true)}>Change Password</button></div></section></div></div>
+    </>}
+    <PasswordChangeModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)}/>
+  </EmployeeLayout>;
 }

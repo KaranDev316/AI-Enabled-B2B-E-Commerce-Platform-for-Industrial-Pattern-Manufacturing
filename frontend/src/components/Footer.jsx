@@ -5,7 +5,7 @@ import './Footer.css';
 
 export function Footer() {
   const { pathname } = useLocation();
-  if (["/customer", "/admin"].includes(pathname)) return null;
+  if (["/customer", "/admin", "/employee"].includes(pathname)) return null;
   function backToTop() {
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }
