@@ -177,6 +177,15 @@ class Product(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
+    @property
+    def category_name(self) -> Optional[str]:
+        return self.category.name if self.category else None
+
+    specifications: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    images: Mapped[list['ProductImage']] = relationship(
+        'ProductImage', back_populates='product', cascade='all, delete-orphan', order_by='ProductImage.id'
+    )
+
     category: Mapped[Optional['Category']] = relationship('Category', back_populates='products')
     rfqs: Mapped[list['RFQ']] = relationship('RFQ', back_populates='product')
 
@@ -330,3 +339,18 @@ class SupportTicketFile(Base):
     ticket: Mapped['SupportTicket'] = relationship('SupportTicket', back_populates='attachments')
     uploader: Mapped['User'] = relationship('User')
 
+
+
+class ProductImage(Base):
+    __tablename__ = 'product_images'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey('products.id', ondelete='CASCADE'), index=True)
+    storage_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    product: Mapped['Product'] = relationship('Product', back_populates='images')
+
+    @property
+    def url(self) -> str:
+        return f'/api/products/images/{self.id}'

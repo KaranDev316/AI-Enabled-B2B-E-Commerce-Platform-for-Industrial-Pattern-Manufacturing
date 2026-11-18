@@ -18,6 +18,13 @@ class RFQFileOut(BaseModel):
 
 
 
+class ProductImageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    file_name: str
+    url: str
+
+
 class ProductSummaryResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,6 +35,10 @@ class ProductSummaryResponse(BaseModel):
     indicative_price: Optional[float] = None
     is_active: bool
     category_id: Optional[int] = None
+    description: Optional[str] = None
+    category_name: Optional[str] = None
+    specifications: Optional[str] = None
+    images: list[ProductImageResponse] = Field(default_factory=list)
 
 
 class RFQCreateRequest(BaseModel):

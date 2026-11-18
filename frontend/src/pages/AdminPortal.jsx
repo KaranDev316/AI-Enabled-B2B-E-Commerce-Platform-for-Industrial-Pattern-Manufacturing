@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { PortalLayout } from '../components/PortalLayout';
+import { AdminCatalogue } from './AdminCatalogue';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -387,6 +388,7 @@ export function AdminPortal() {
 
       {/* Navigation Pills */}
       <ul className="nav nav-pills mb-4 gap-2">
+        <li className="nav-item"><button className={`nav-link fw-bold btn-sm ${activeTab === 'catalogue' ? 'active' : 'bg-white border'}`} onClick={() => setActiveTab('catalogue')}>Products & Categories</button></li>
         <li className="nav-item">
           <button
             className={`nav-link fw-bold btn-sm ${activeTab === 'rfqs' ? 'active' : 'bg-white border'}`}
@@ -415,6 +417,8 @@ export function AdminPortal() {
           </button>
         </li>
       </ul>
+
+      {activeTab === 'catalogue' && <AdminCatalogue />}
 
       {/* TAB 1: RFQ REVIEW QUEUE (SLICE S05) */}
       {activeTab === 'rfqs' && (
