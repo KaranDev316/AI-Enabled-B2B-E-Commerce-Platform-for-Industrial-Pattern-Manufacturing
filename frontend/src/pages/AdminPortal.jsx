@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { PortalLayout } from '../components/PortalLayout';
+import { AdminLayout, adminPages } from '../components/AdminLayout';
+import { AdminDashboard, AdminUnavailable } from '../components/AdminDashboard';
 import { AdminCatalogue } from './AdminCatalogue';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
 
@@ -8,7 +9,15 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function AdminPortal() {
   const { user, csrfToken } = useAuth();
-  const [activeTab, setActiveTab] = useState('rfqs'); // 'rfqs', 'users'
+  const [activeTab, setActiveTab] = useState(() => { const tab = new URLSearchParams(window.location.search).get('tab'); return adminPages.some(page => page.id === tab) ? tab : 'dashboard'; });
+  const [dashboardSearch, setDashboardSearch] = useState('');
+  function navigateTab(tab) {
+    setActiveTab(tab);
+    setFeedback({ error: '', success: '' });
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState(null, '', url);
+  }
 
   // Users State (S02)
   const [users, setUsers] = useState([]);
@@ -359,20 +368,13 @@ export function AdminPortal() {
   }
 
   return (
-    <PortalLayout
-      sidebarItems={[{id:'catalogue',label:'Products & Categories'},{id:'rfqs',label:'Customer RFQs'},{id:'users',label:'Users & Employees'},{id:'support',label:'Support Tickets'},{to:'/catalogue',label:'Public Catalogue'},{to:'/',label:'Visit Website'}]}
-      activeSection={activeTab}
-      onSectionChange={setActiveTab}
-      title="Admin Control Center"
-      subtitle="KPC Operations, User Accounts & Manufacturing Administration"
-      roleBadgeColor="danger"
-    >
+    <AdminLayout activeTab={activeTab} onNavigate={navigateTab} search={dashboardSearch} onSearch={setDashboardSearch} onPassword={() => setIsPasswordModalOpen(true)}>
       {feedback.success && (
         <div className="alert alert-success alert-dismissible fade show small py-2 mb-3" role="alert">
           {feedback.success}
           <button
             type="button"
-            className="btn-close"
+            className="btn-close" aria-label="Close"
             onClick={() => setFeedback({ ...feedback, success: '' })}
           ></button>
         </div>
@@ -383,14 +385,14 @@ export function AdminPortal() {
           {feedback.error}
           <button
             type="button"
-            className="btn-close"
+            className="btn-close" aria-label="Close"
             onClick={() => setFeedback({ ...feedback, error: '' })}
           ></button>
         </div>
       )}
 
-      {/* Navigation Pills */}
-
+      {activeTab === 'dashboard' && <AdminDashboard search={dashboardSearch} onNavigate={navigateTab} onOpenRfq={rfq => { navigateTab('rfqs'); setSelectedRfqModal(rfq); }} onOpenTicket={id => { navigateTab('support'); handleOpenAdminTicket(id); }} />}
+      {['orders', 'inventory', 'invoices', 'reports'].includes(activeTab) && <AdminUnavailable title={adminPages.find(page => page.id === activeTab)?.title} onSupport={() => navigateTab('support')} />}
 
       {activeTab === 'catalogue' && <AdminCatalogue />}
 
@@ -552,7 +554,7 @@ export function AdminPortal() {
         <div className="card shadow-sm border-0 rounded-3 mb-4">
           <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-              <h5 className="card-title h6 mb-1 fw-bold">User & Account Access Management (Slice S02)</h5>
+              <h5 className="card-title h6 mb-1 fw-bold">Users & account access</h5>
               <p className="text-muted small mb-0">
                 Manage Customer and Employee accounts, deactivate compromised logins, and perform credential resets.
               </p>
@@ -725,7 +727,7 @@ export function AdminPortal() {
         <div className="card shadow-sm border-0 rounded-3 mb-4">
           <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-              <h5 className="card-title h6 mb-1 fw-bold">Customer Support & Complaints Queue (Slice S14)</h5>
+              <h5 className="card-title h6 mb-1 fw-bold">Customer support tickets</h5>
               <p className="text-muted small mb-0">
                 Review and resolve customer inquiries, pattern dimensional disputes, and technical support conversations.
               </p>
@@ -919,7 +921,7 @@ export function AdminPortal() {
                 </div>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close" aria-label="Close"
                   onClick={() => setSelectedRfqModal(null)}
                 ></button>
               </div>
@@ -1078,7 +1080,7 @@ export function AdminPortal() {
                 <h5 className="modal-title fw-bold">Provision Employee Account</h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close" aria-label="Close"
                   onClick={() => setIsEmployeeModalOpen(false)}
                   disabled={submittingEmp}
                 ></button>
@@ -1193,7 +1195,7 @@ export function AdminPortal() {
                 <h5 className="modal-title fw-bold">Reset Password</h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close" aria-label="Close"
                   onClick={() => {
                     setIsResetModalOpen(false);
                     setTargetUserForReset(null);
@@ -1274,7 +1276,7 @@ export function AdminPortal() {
                   </a>
                   <button
                     type="button"
-                    className="btn-close"
+                    className="btn-close" aria-label="Close"
                     onClick={() => setPreviewFile(null)}
                   ></button>
                 </div>
@@ -1530,6 +1532,6 @@ export function AdminPortal() {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
-    </PortalLayout>
+    </AdminLayout>
   );
 }
