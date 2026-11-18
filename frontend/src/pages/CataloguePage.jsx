@@ -11,7 +11,7 @@ export function ProductImage({ image, name }) {
   useEffect(() => setFailed(false), [image]);
   if (!image || failed) return <div className="catalogue-image catalogue-image-empty">Image coming soon</div>;
   const crop = image.crop;
-  return <div className="catalogue-image" role="img" aria-label={image.alt || name}><img src={image.src} alt="" onError={() => setFailed(true)} style={crop ? { position: 'absolute', maxWidth: 'none', width: `${crop.sourceWidth / crop.width * 100}%`, left: `${-crop.x / crop.width * 100}%`, top: 0, transform: `translateY(${-crop.y / crop.sourceHeight * 100}%)` } : undefined} /></div>;
+  return <div className="catalogue-image" role="img" aria-label={image.alt || name}><img src={image.src || image.url} alt="" onError={() => setFailed(true)} style={crop ? { position: 'absolute', maxWidth: 'none', width: `${crop.sourceWidth / crop.width * 100}%`, left: `${-crop.x / crop.width * 100}%`, top: 0, transform: `translateY(${-crop.y / crop.sourceHeight * 100}%)` } : undefined} /></div>;
 }
 export function CataloguePage() {
   const { productId } = useParams();
@@ -41,7 +41,7 @@ export function CataloguePage() {
   const categoryOptions = [...new Set(products.map(p => p.category_name).filter(Boolean))];
   const materialOptions = [...new Set(products.map(p => p.material_type).filter(Boolean))];
   const filtered = products.filter(p => (!search || `${p.name} ${p.description || ''}`.toLowerCase().includes(search.toLowerCase())) && (!categories.length || categories.includes(p.category_name)) && (!materials.length || materials.includes(p.material_type))).sort((a,b) => sort === 'price' ? (a.indicative_price ?? Infinity) - (b.indicative_price ?? Infinity) : a.name.localeCompare(b.name));
-  const product = products.find(p => String(p.id) === productId);
+  const product = products.find(p => (String(p.id) === productId || p.slug === productId));
   const rfqLink = product ? `/customer?product=${encodeURIComponent(product.id)}` : '/customer';
   const stateView = status === 'loading' ? <div className="catalogue-state" role="status">Loading patterns…</div> : status === 'error' ? <div className="catalogue-state" role="alert"><h2>Unable to load the catalogue</h2><p>Please try again when the service is available.</p><button className="public-button public-button-outline" onClick={() => setRetry(retry+1)}>Try again</button></div> : null;
   return <div className="kpc-public catalogue-page"><PublicHeader />{preview && <div className="catalogue-preview">Design preview — sample products, images, prices, and specifications. <Link to="/products">View live catalogue</Link></div>}

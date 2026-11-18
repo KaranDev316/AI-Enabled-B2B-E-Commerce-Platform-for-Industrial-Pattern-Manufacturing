@@ -2,24 +2,59 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CustomerIcon } from './CustomerLayout';
 
-export function CustomerDashboard({ rfqs, tickets, loading, error, onRetry, onNavigate, onNewRfq, onOpenRfq, contact }) {
+export function CustomerDashboard({ rfqs, tickets, loading, error, onRetry, onNavigate, onNewRfq, onOpenRfq }) {
   const review = rfqs.filter(r => ['submitted', 'under_review'].includes(r.status)).length;
   const openTickets = tickets.filter(t => ['open', 'in_progress'].includes(t.status)).length;
+  const recent = [...rfqs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+
   return <div className="customer-dashboard">
-    <section className="customer-welcome"><div><span className="customer-welcome-tag"><span/> LET’S BUILD SOMETHING PRECISE</span><h2>Welcome back{contact ? `, ${contact.split(' ')[0]}` : ''}.</h2><p>Your next pattern starts with a great requirement.<br/>Share a drawing, tell us what you need, and we’ll take it from there.</p><button className="btn customer-welcome-button" onClick={onNewRfq}>Start a new request <CustomerIcon name="arrow" size={18}/></button></div><div className="customer-blueprint" aria-hidden="true"><svg viewBox="0 0 280 200" fill="none"><path d="m140 28 94 52v65l-94 53-94-53V80zM46 80l94 54 94-54M140 134v64M93 54l94 54v63"/><path d="m140 57 48 27-48 28-48-28zM140 57v55"/><path d="M28 57V24h38M214 24h38v33M28 159v29h38M214 188h38v-29" strokeDasharray="4 5"/></svg><span>CRAFTED TO YOUR SPECIFICATION</span></div></section>
-    {error ? <div className="alert alert-danger" role="alert">{error} <button className="btn btn-sm btn-outline-danger" onClick={onRetry}>Try again</button></div> : null}
-    <section className="customer-stat-grid" aria-label="Workspace overview">{[
-      { label: 'Submitted RFQs', value: rfqs.length, note: 'All your pattern requirements', icon: 'rfqs', tab: 'rfqs' },
-      { label: 'Awaiting review', value: review, note: 'Submitted or under review', icon: 'orders', tab: 'rfqs' },
-      { label: 'Open support tickets', value: openTickets, note: 'Conversations in progress', icon: 'support', tab: 'support' },
-    ].map((s,i) => <button className={`customer-stat ${i === 0 ? 'customer-stat-featured' : ''}`} key={s.label} onClick={() => onNavigate(s.tab)}><span className="customer-stat-icon"><CustomerIcon name={s.icon} size={27}/></span><span className="customer-stat-copy"><span>{s.label}</span><strong>{loading || error ? '—' : s.value.toLocaleString()}</strong><small>{s.note}</small></span><CustomerIcon name="arrow" size={18}/></button>)}</section>
-    <div className="customer-dashboard-columns"><section className="card customer-recent"><div className="customer-section-header"><h2><span className="customer-heading-icon"><CustomerIcon name="rfqs"/></span> Recent requests</h2><button className="customer-text-link" onClick={() => onNavigate('rfqs')}>View all <CustomerIcon name="arrow" size={16}/></button></div>{loading ? <div className="customer-empty" role="status">Loading your requests…</div> : error ? <div className="customer-empty">Your requests couldn’t be loaded. Please try again.</div> : rfqs.length ? <div className="table-responsive"><table className="table mb-0"><thead><tr><th>REQUEST / PATTERN</th><th>SUBMITTED</th><th>STATUS</th><th><span className="visually-hidden">Details</span></th></tr></thead><tbody>{[...rfqs].sort((a,b) => new Date(b.created_at)-new Date(a.created_at)).slice(0,5).map(r => <tr key={r.id}><td><strong>{r.title}</strong><small className="d-block text-muted">{r.rfq_number}</small></td><td>{new Date(r.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td><td><span className={`customer-status status-${r.status}`}>{r.status.replaceAll('_',' ')}</span></td><td><button className="customer-row-open" aria-label={`View ${r.rfq_number}`} onClick={() => onOpenRfq(r.id)}><CustomerIcon name="arrow" size={18}/></button></td></tr>)}</tbody></table></div> : <div className="customer-empty"><span className="customer-empty-icon"><CustomerIcon name="rfqs" size={32}/></span><h3>A place for your next big idea.</h3><p>Your submitted requests will appear here.<br/>Start with a catalogue pattern or share your own design.</p><button className="btn btn-outline-primary" onClick={onNewRfq}>Create your first RFQ <CustomerIcon name="arrow" size={16}/></button></div>}</section>
-    <aside className="customer-quick-actions"><section className="card"><div className="customer-section-header"><h2><span className="customer-heading-icon orange"><CustomerIcon name="plus"/></span> Quick actions</h2></div><div className="customer-action-stack"><button className="btn btn-primary" onClick={onNewRfq}><CustomerIcon name="plus"/> New request for quotation</button><button className="btn btn-outline-primary" onClick={onNewRfq}><CustomerIcon name="upload"/> Add CAD to a new request</button><Link className="customer-text-link" to="/products">Explore the product catalogue <CustomerIcon name="arrow" size={16}/></Link></div></section><section className="customer-help-card"><CustomerIcon name="support" size={28}/><h3>A little guidance goes a long way.</h3><p>Questions about materials, drawings, or your requirement? Talk to our team.</p><button className="customer-text-link" onClick={() => onNavigate('support')}>Get support <CustomerIcon name="arrow" size={16}/></button></section></aside></div>
-    <section className="card customer-next-steps"><div className="customer-section-header"><h2><span className="customer-heading-icon"><CustomerIcon name="orders"/></span> From requirement to ready</h2><span>Your project journey</span></div><div className="customer-journey">{[['01','Share your requirement','Choose a pattern or upload your design.'],['02','Engineering review','Our team reviews your specifications.'],['03','Agree on the details','Price and lead time are confirmed by KPC.']].map(([n,title,description]) => <div key={n}><span>{n}</span><div><h3>{title}</h3><p>{description}</p></div></div>)}</div></section>
+    {error && <div className="alert alert-danger" role="alert">{error} <button className="btn btn-sm btn-outline-danger" onClick={onRetry}>Try again</button></div>}
+    <section className="customer-stat-grid" aria-label="Workspace overview">
+      {[
+        { label: 'My RFQs', value: rfqs.length, note: 'Requirements submitted to KPC', icon: 'rfqs' },
+        { label: 'Awaiting review', value: review, note: 'Submitted or under engineering review', icon: 'orders' },
+      ].map((stat, index) => <button className={`customer-stat ${index === 0 ? 'customer-stat-featured' : ''}`} key={stat.label} onClick={() => onNavigate('rfqs')}>
+        <span className="customer-stat-icon"><CustomerIcon name={stat.icon} size={36}/></span>
+        <span className="customer-stat-copy"><span>{stat.label}</span><strong>{loading || error ? '—' : stat.value.toLocaleString()}</strong><small>{stat.note}</small></span>
+        <CustomerIcon name="arrow" size={22}/>
+      </button>)}
+    </section>
+
+    <div className="customer-dashboard-columns">
+      <section className="card customer-recent">
+        <div className="customer-section-header"><h2><span className="customer-heading-icon"><CustomerIcon name="rfqs"/></span> Recent RFQs</h2><button className="customer-text-link" onClick={() => onNavigate('rfqs')}>View all RFQs <CustomerIcon name="arrow" size={16}/></button></div>
+        <div className="table-responsive"><table className="table mb-0"><thead><tr><th>RFQ REFERENCE</th><th>PATTERN</th><th>DATE</th><th>STATUS</th><th><span className="visually-hidden">Details</span></th></tr></thead><tbody>
+          {loading || error || !recent.length ? <tr><td colSpan="5"><div className="customer-empty">
+            {loading ? <p role="status">Loading your requests…</p> : error ? <p>Your requests could not be loaded.</p> : <><CustomerIcon name="rfqs" size={30}/><h3>No RFQs submitted yet</h3><p>Create a request for a catalogue pattern or your own design.</p><button className="btn btn-outline-primary" onClick={onNewRfq}>Create an RFQ</button></>}
+          </div></td></tr> : recent.map(rfq => <tr key={rfq.id}>
+            <td><strong>{rfq.rfq_number}</strong></td><td>{rfq.title}</td>
+            <td>{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+            <td><span className={`customer-status status-${rfq.status}`}>{rfq.status.replaceAll('_', ' ')}</span></td>
+            <td><button className="customer-row-open" aria-label={`View ${rfq.rfq_number}`} onClick={() => onOpenRfq(rfq.id)}><CustomerIcon name="arrow" size={18}/></button></td>
+          </tr>)}
+        </tbody></table></div>
+      </section>
+      <aside className="customer-quick-actions">
+        <section className="card"><div className="customer-section-header"><h2><span className="customer-heading-icon orange"><CustomerIcon name="plus"/></span> Quick actions</h2></div>
+          <div className="customer-action-stack"><button className="btn btn-primary" onClick={onNewRfq}><CustomerIcon name="plus"/> New RFQ</button><Link className="btn btn-outline-primary" to="/products"><CustomerIcon name="orders"/> Browse catalogue</Link></div>
+        </section>
+        <section className="customer-help-card"><h2><CustomerIcon name="support" size={24}/> Support & Complaints</h2><p>{loading || error ? 'View your conversations with the KPC team.' : `${openTickets} open ${openTickets === 1 ? 'ticket' : 'tickets'}. Get help with your requirements or an existing order.`}</p><button className="customer-text-link" onClick={() => onNavigate('support')}>View support tickets <CustomerIcon name="arrow" size={16}/></button></section>
+      </aside>
+    </div>
+
+    <section className="card customer-request-tracking">
+      <div className="customer-section-header"><h2><span className="customer-heading-icon"><CustomerIcon name="orders"/></span> RFQ status</h2><span>Latest requirements</span></div>
+      {loading || error || !recent.length ? <div className="customer-tracking-empty"><p>{loading ? 'Loading request status…' : error ? 'Request status is unavailable.' : 'Once you submit an RFQ, you can follow its review status here.'}</p></div> : <div className="customer-tracking-grid">{recent.slice(0, 2).map(rfq => <button className="customer-tracking-card" onClick={() => onOpenRfq(rfq.id)} key={rfq.id}>
+        <strong>{rfq.rfq_number}</strong><span>{rfq.title}</span><div className="customer-tracking-stages">{['submitted', 'under_review', 'quoted'].map(status => <span key={status} className={status === rfq.status ? 'is-current' : ''}>{status.replaceAll('_', ' ')}</span>)}</div><small>Current status: {rfq.status.replaceAll('_', ' ')}</small>
+      </button>)}</div>}
+    </section>
   </div>;
 }
 
 export function CustomerUnavailable({ type, onNewRfq, onSupport }) {
   const orders = type === 'orders';
-  return <section className="card customer-unavailable"><span className="customer-empty-icon"><CustomerIcon name={type} size={40}/></span><span className="customer-feature-tag">COMING TO YOUR WORKSPACE</span><h2>{orders ? 'Your order journey, in one place.' : 'A clear view of your invoices.'}</h2><p>{orders ? 'Order history and production tracking aren’t available in this workspace yet. You can submit a requirement or ask our team about an existing order.' : 'Invoice downloads and payment tracking aren’t available in this workspace yet. Contact our team for help with billing.'}</p><div><button className="btn btn-primary" onClick={orders ? onNewRfq : onSupport}>{orders ? 'Start with an RFQ' : 'Contact support'}<CustomerIcon name="arrow" size={18}/></button>{orders && <button className="btn btn-outline-primary" onClick={onSupport}>Ask about an order</button>}</div></section>;
+  return <section className="card customer-records-pending">
+    <div className="customer-section-header"><h2><span className="customer-heading-icon"><CustomerIcon name={type}/></span>{orders ? 'Order history' : 'Invoices & payment history'}</h2><button className="customer-text-link" onClick={onSupport}>Contact support <CustomerIcon name="arrow" size={16}/></button></div>
+    <div className="table-responsive"><table className="table mb-0"><thead><tr>{(orders ? ['ORDER ID', 'PATTERN', 'ORDER DATE', 'STATUS', 'EXPECTED COMPLETION'] : ['INVOICE', 'ORDER', 'ISSUED', 'TOTAL', 'BALANCE', 'STATUS']).map(label => <th key={label}>{label}</th>)}</tr></thead><tbody><tr><td colSpan={orders ? 5 : 6}><div className="customer-empty"><CustomerIcon name={type} size={35}/><h3>{orders ? 'Order tracking is not available yet' : 'Invoice and payment tracking is not available yet'}</h3><p>{orders ? 'You can submit an RFQ now. For updates about an order, contact KPC support.' : 'For invoice copies or billing questions, contact KPC support.'}</p><button className="btn btn-primary" onClick={orders ? onNewRfq : onSupport}>{orders ? 'New RFQ' : 'Contact support'}</button></div></td></tr></tbody></table></div>
+  </section>;
 }

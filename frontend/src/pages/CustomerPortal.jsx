@@ -610,7 +610,7 @@ export function CustomerPortal() {
         </div>
       )}
 
-      {!isRfqModalOpen && activeTab === 'dashboard' && <CustomerDashboard rfqs={myRfqs} tickets={supportTickets} loading={loadingRfqs || loadingTickets} error={rfqError || supportError} onRetry={() => { fetchMyRfqs(); fetchSupportTickets(); }} onNavigate={navigateTab} onNewRfq={startRfq} onOpenRfq={openRfqDetails} contact={profile?.contact_person} />}
+      {!isRfqModalOpen && activeTab === 'dashboard' && <CustomerDashboard rfqs={myRfqs} tickets={supportTickets} loading={loadingRfqs || loadingTickets} error={rfqError || supportError} onRetry={() => { fetchMyRfqs(); fetchSupportTickets(); }} onNavigate={navigateTab} onNewRfq={startRfq} onOpenRfq={openRfqDetails} />}
       {!isRfqModalOpen && ['orders','invoices'].includes(activeTab) && <CustomerUnavailable type={activeTab} onNewRfq={startRfq} onSupport={() => navigateTab('support')} />}
 
       {/* TAB 1: RFQ WORKSPACE (SLICE S05) */}
@@ -1330,58 +1330,24 @@ export function CustomerPortal() {
                     </div>
                   )}
 
-                  {/* STEP 3: REVIEW & SUBMIT */}
                   {rfqStep === 3 && (
-                    <div className="row g-3">
-                      <div className="col-12">
-                        <div className="alert alert-light border rounded-3 p-3 mb-3">
-                          <h6 className="fw-bold text-dark mb-2">Requirement Summary</h6>
-                          <div className="row g-2 small">
-                            <div className="col-6"><strong>Pattern Title:</strong> {rfqForm.title}</div>
-                            <div className="col-6"><strong>Type:</strong> <span className="text-uppercase badge bg-secondary">{rfqForm.rfq_type}</span></div>
-                            <div className="col-6"><strong>Material:</strong> {rfqForm.material}</div>
-                            <div className="col-6"><strong>Quantity:</strong> {rfqForm.quantity} pcs</div>
-                            <div className="col-6"><strong>Dimensions:</strong> {rfqForm.dimensions || 'Not specified'}</div>
-                            <div className="col-6"><strong>Target Date:</strong> {rfqForm.target_delivery_date || 'Not specified'}</div>
-                            {rfqForm.specifications && (
-                              <div className="col-12"><strong>Specifications:</strong> {rfqForm.specifications}</div>
-                            )}
-                            <div className="col-12">
-                              <strong>Attachments ({selectedFiles.length}/2):</strong>{' '}
-                              {selectedFiles.length > 0 ? (
-                                selectedFiles.map((f) => f.name).join(', ')
-                              ) : (
-                                <span className="text-muted">None attached</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="card border-0 bg-light p-3 rounded-3 mb-3">
-                          <h6 className="fw-bold small mb-1">Company Contact Information (From Profile)</h6>
-                          <p className="small text-muted mb-0">
-                            <strong>{profile?.company_name || 'Your business'}</strong> · Contact: {profile?.contact_person} · {profile?.phone}
-                          </p>
-                        </div>
+                    <div className="customer-review-layout">
+                      <div className="customer-review-sections">
+                        <section className="card"><div className="customer-section-header"><h3>1. Product requirement</h3><button type="button" className="customer-text-link" onClick={() => setRfqStep(1)} disabled={submittingRfq}>Edit</button></div><dl className="customer-review-details">
+                          {[
+                            ['Request type', rfqForm.rfq_type === 'standard' ? 'Catalogue product' : 'Custom product'],
+                            ['Pattern name', rfqForm.title], ['Material', rfqForm.material], ['Quantity', `${rfqForm.quantity} pcs`],
+                            ['Description', rfqForm.description || 'Not provided'], ['Target delivery', rfqForm.target_delivery_date || 'Not specified'],
+                          ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                        </dl></section>
+                        <section className="card"><div className="customer-section-header"><h3>2. Drawings & specifications</h3><button type="button" className="customer-text-link" onClick={() => setRfqStep(2)} disabled={submittingRfq}>Edit</button></div><dl className="customer-review-details">
+                          {[
+                            ['Dimensions', rfqForm.dimensions || 'Not specified'], ['Tolerances', rfqForm.specifications || 'Not specified'], ['Technical notes', rfqForm.notes || 'Not provided'],
+                          ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                        </dl><div className="customer-review-files">{selectedFiles.length ? selectedFiles.map((file, index) => <div key={`${file.name}-${index}`}><CustomerIcon name="rfqs"/><strong>{file.name}</strong><span>{formatFileSize(file.size)}</span></div>) : <p>No files attached.</p>}</div></section>
+                        <section className="card"><div className="customer-section-header"><h3>3. Contact information</h3></div><dl className="customer-review-details">{[['Company', profile?.company_name || 'Not provided'], ['Contact person', profile?.contact_person || 'Not provided'], ['Email', user?.email], ['Phone', profile?.phone || 'Not provided']].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>
                       </div>
-
-                      <div className="col-12 d-flex justify-content-between mt-3">
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary"
-                          onClick={() => setRfqStep(2)}
-                          disabled={submittingRfq}
-                        >
-                          ← Edit Technical Specs
-                        </button>
-                        <button
-                          type="submit"
-                          className="btn btn-primary btn-lg fw-bold"
-                          disabled={submittingRfq}
-                        >
-                          {submittingRfq ? 'Submitting to KPC Engineering…' : 'Submit Official RFQ'}
-                        </button>
-                      </div>
+                      <aside className="customer-review-submit"><section className="card"><h3>Submit your RFQ</h3><p>KPC will review your requirement and drawings. You can follow the request’s status from your RFQ list.</p><button type="submit" className="btn btn-primary" disabled={submittingRfq}>{submittingRfq ? 'Submitting…' : 'Submit RFQ'}<CustomerIcon name="arrow" size={18}/></button><button type="button" className="btn btn-outline-primary" onClick={() => setRfqStep(2)} disabled={submittingRfq}>Back to CAD & specifications</button></section><div className="customer-review-note"><strong>Before you submit</strong><p>Check your dimensions, material, and contact details. Final pricing and delivery dates are confirmed by KPC.</p></div></aside>
                     </div>
                   )}
                 </form>

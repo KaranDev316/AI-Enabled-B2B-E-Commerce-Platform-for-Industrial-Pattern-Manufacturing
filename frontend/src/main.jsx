@@ -14,7 +14,8 @@ import { AdminPortal } from './pages/AdminPortal';
 import { Footer } from './components/Footer';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
-import { PublicHome, CataloguePage, ProductPage } from './pages/PublicCatalogue';
+import { LandingPage } from './pages/LandingPage';
+import { CataloguePage } from './pages/CataloguePage';
 
 function PublicNavigationScroll() {
   const { pathname, hash, key } = useLocation();
@@ -43,10 +44,10 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <PublicNavigationScroll />
         <div className="app-layout"><div className="app-content"><Routes>
-          <Route path="/" element={<PublicHome />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/catalogue" element={<CataloguePage />} />
           <Route path="/products" element={<CataloguePage />} />
-          <Route path="/products/:slug" element={<ProductPage />} />
+          <Route path="/products/:productId" element={<CataloguePage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route
