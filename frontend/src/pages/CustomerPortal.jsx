@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { PortalLayout } from '../components/PortalLayout';
+import { CustomerLayout, CustomerIcon } from '../components/CustomerLayout';
+import { CustomerDashboard, CustomerUnavailable } from '../components/CustomerDashboard';
+import { CustomerProfile } from '../components/CustomerProfile';
+import './CustomerPortal.css';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -9,7 +12,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 export function CustomerPortal() {
   const { user, csrfToken } = useAuth();
   const [profile, setProfile] = useState(user?.customer_profile || {});
-  const [activeTab, setActiveTab] = useState('rfqs'); // 'rfqs', 'profile'
+  const [activeTab, setActiveTab] = useState(['dashboard', 'rfqs', 'orders', 'invoices', 'support', 'profile'].includes(new URLSearchParams(window.location.search).get('tab')) ? new URLSearchParams(window.location.search).get('tab') : 'dashboard');
 
   // Profile Edit State
   const [isEditing, setIsEditing] = useState(false);
@@ -28,7 +31,11 @@ export function CustomerPortal() {
 
   // RFQ Workflow State (Slice S05 & S06)
   const [myRfqs, setMyRfqs] = useState([]);
-  const [loadingRfqs, setLoadingRfqs] = useState(false);
+  const [loadingRfqs, setLoadingRfqs] = useState(true);
+  const [rfqError, setRfqError] = useState('');
+  const [supportError, setSupportError] = useState('');
+  const [rfqSearch, setRfqSearch] = useState('');
+  const [rfqStatus, setRfqStatus] = useState('all');
   const [isRfqModalOpen, setIsRfqModalOpen] = useState(false);
   const [selectedRfqDetail, setSelectedRfqDetail] = useState(null);
   const [catalogueProducts, setCatalogueProducts] = useState([]);
@@ -40,8 +47,10 @@ export function CustomerPortal() {
     const product = catalogueProducts.find(p => String(p.id) === selected);
     if (!product) return;
     setRfqForm(prev => ({ ...prev, rfq_type: 'standard', product_id: String(product.id), title: product.name, material: product.material_type || prev.material }));
+    setFeedback({ error: '', success: '' });
     setRfqStep(1);
     setIsRfqModalOpen(true);
+    window.scrollTo(0, 0);
   }, [location.search, catalogueProducts]);
 
   // File Attachments State (Slice S06)
@@ -71,7 +80,6 @@ export function CustomerPortal() {
   const [supportTickets, setSupportTickets] = useState([]);
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isTicketDetailOpen, setIsTicketDetailOpen] = useState(false);
   const [customerContext, setCustomerContext] = useState({ orders: [], rfqs: [] });
   const [ticketForm, setTicketForm] = useState({
@@ -93,18 +101,40 @@ export function CustomerPortal() {
   useEffect(() => {
     fetchMyRfqs();
     fetchCatalogueProducts();
+    fetchSupportTickets();
+    fetchCustomerContext();
   }, []);
+
+  function navigateTab(tab) {
+    setActiveTab(tab);
+    window.scrollTo(0, 0);
+    setIsRfqModalOpen(false);
+    setIsTicketDetailOpen(false);
+    setSelectedRfqDetail(null);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    url.searchParams.delete('product');
+    window.history.replaceState(null, '', url);
+    setFeedback({ error: '', success: '' });
+    if (tab === 'support') { fetchSupportTickets(); fetchCustomerContext(); }
+  }
+
+  function startRfq() {
+    setRfqStep(1);
+    setIsRfqModalOpen(true);
+  }
 
   async function fetchMyRfqs() {
     setLoadingRfqs(true);
+    setRfqError('');
     try {
       const res = await fetch(`${API_BASE}/rfqs/my`, { credentials: 'same-origin' });
       if (res.ok) {
         const data = await res.json();
         setMyRfqs(data);
-      }
+      } else { throw new Error('Unable to load your requests. Please try again.'); }
     } catch (err) {
-      console.error('Failed to load RFQs:', err);
+      setRfqError('Unable to load your requests. Please try again.');
     } finally {
       setLoadingRfqs(false);
     }
@@ -124,14 +154,15 @@ export function CustomerPortal() {
 
   async function fetchSupportTickets() {
     setLoadingTickets(true);
+    setSupportError('');
     try {
       const res = await fetch(`${API_BASE}/support/tickets/my`, { credentials: 'same-origin' });
       if (res.ok) {
         const data = await res.json();
         setSupportTickets(data);
-      }
+      } else { throw new Error('Unable to load your support tickets.'); }
     } catch (err) {
-      console.error('Failed to load support tickets:', err);
+      setSupportError('Unable to load your support tickets. Please try again.');
     } finally {
       setLoadingTickets(false);
     }
@@ -169,6 +200,11 @@ export function CustomerPortal() {
 
   async function handleCreateTicket(e) {
     e.preventDefault();
+    if (submittingTicket) return;
+    if (ticketForm.subject.trim().length < 3 || ticketForm.message.trim().length < 5) {
+      setTicketFileError('Enter a subject of at least 3 characters and a message of at least 5 characters.');
+      return;
+    }
     setSubmittingTicket(true);
     setTicketFileError('');
 
@@ -198,6 +234,7 @@ export function CustomerPortal() {
 
       const created = await res.json();
 
+      const failedAttachments = [];
       // If user selected attachments, upload each
       for (const file of ticketFiles) {
         const formData = new FormData();
@@ -211,18 +248,19 @@ export function CustomerPortal() {
           body: formData,
         });
         if (!upRes.ok) {
-          const upErr = await upRes.json().catch(() => ({}));
-          console.warn('File upload warning:', upErr.detail);
+          failedAttachments.push(file.name);
         }
       }
 
       setFeedback({
         error: '',
-        success: `Support Ticket ${created.ticket_number} created successfully! Our team will respond shortly.`,
+        success: `Support ticket ${created.ticket_number} created. Our team will follow up here.`,
       });
-      setIsTicketModalOpen(false);
       setTicketForm({ ticket_type: 'inquiry', subject: '', message: '', order_id: '', rfq_id: '' });
       setTicketFiles([]);
+      if (failedAttachments.length) setTicketFileError(`Your ticket was created, but these files could not be attached: ${failedAttachments.join(', ')}. Open the conversation to attach them in a reply.`);
+      const ticketInput = document.getElementById('customer-field-16');
+      if (ticketInput) ticketInput.value = '';
       fetchSupportTickets();
     } catch (err) {
       setTicketFileError(err.message);
@@ -433,6 +471,7 @@ export function CustomerPortal() {
 
   async function handleRfqSubmit(e) {
     e.preventDefault();
+    if (rfqStep !== 3 || submittingRfq) return;
     setFeedback({ error: '', success: '' });
     setSubmittingRfq(true);
 
@@ -468,10 +507,13 @@ export function CustomerPortal() {
       const createdRfq = await response.json();
 
       // Upload any selected files
+      const failedFiles = [];
+      let uploadedFiles = 0;
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
           const formData = new FormData();
           formData.append('file', file);
+          try {
           const upRes = await fetch(`${API_BASE}/rfqs/${createdRfq.id}/files`, {
             method: 'POST',
             headers: {
@@ -481,16 +523,18 @@ export function CustomerPortal() {
             body: formData,
           });
           if (!upRes.ok) {
-            console.error('File upload failed for', file.name);
-          }
+            failedFiles.push(file.name);
+          } else { uploadedFiles += 1; }
+          } catch { failedFiles.push(file.name); }
         }
       }
 
       setFeedback({
-        error: '',
-        success: `RFQ ${createdRfq.rfq_number} submitted successfully with ${selectedFiles.length} file(s)! KPC Admin will review your pattern requirements.`,
+        error: failedFiles.length ? `Your RFQ was saved, but these files could not be attached: ${failedFiles.join(', ')}. Open the request to retry the attachments.` : '',
+        success: `RFQ ${createdRfq.rfq_number} submitted with ${uploadedFiles} attachment(s). Our team will review your requirements.`,
       });
       setIsRfqModalOpen(false);
+      setActiveTab('rfqs');
       setSelectedFiles([]);
       setFileUploadError('');
       setRfqStep(1);
@@ -520,21 +564,14 @@ export function CustomerPortal() {
       if (res.ok) {
         const data = await res.json();
         setSelectedRfqDetail(data);
-      }
+      } else { throw new Error('Unable to open this request. Please try again.'); }
     } catch (err) {
-      console.error('Error fetching RFQ detail:', err);
+      setFeedback({ error: 'Unable to open this request. Please try again.', success: '' });
     }
   }
 
   return (
-    <PortalLayout
-      sidebarItems={[{id:'rfqs',label:'My RFQs'},{id:'profile',label:'Company Profile'},{id:'support',label:'Support & Inquiries'},{to:'/catalogue',label:'Browse Catalogue'},{to:'/',label:'Visit Website'}]}
-      activeSection={activeTab}
-      onSectionChange={(section) => { setActiveTab(section); if (section === 'support') { fetchSupportTickets(); fetchCustomerContext(); } }}
-      title="Customer Workspace"
-      subtitle="B2B Manufacturing Requirement Portal · Khodel Pattern Craft"
-      roleBadgeColor="primary"
-    >
+    <CustomerLayout activeTab={activeTab} onNavigate={navigateTab} company={profile?.company_name} onNewRfq={startRfq} wizardOpen={isRfqModalOpen}>
       {user?.must_change_password && (
         <div className="alert alert-warning border-warning shadow-sm rounded-3 mb-4 d-flex justify-content-between align-items-center">
           <div>
@@ -555,6 +592,7 @@ export function CustomerPortal() {
           <button
             type="button"
             className="btn-close"
+            aria-label="Close"
             onClick={() => setFeedback({ ...feedback, success: '' })}
           ></button>
         </div>
@@ -566,23 +604,24 @@ export function CustomerPortal() {
           <button
             type="button"
             className="btn-close"
+            aria-label="Close"
             onClick={() => setFeedback({ ...feedback, error: '' })}
           ></button>
         </div>
       )}
 
-      {/* Navigation Tabs */}
-
+      {!isRfqModalOpen && activeTab === 'dashboard' && <CustomerDashboard rfqs={myRfqs} tickets={supportTickets} loading={loadingRfqs || loadingTickets} error={rfqError || supportError} onRetry={() => { fetchMyRfqs(); fetchSupportTickets(); }} onNavigate={navigateTab} onNewRfq={startRfq} onOpenRfq={openRfqDetails} contact={profile?.contact_person} />}
+      {!isRfqModalOpen && ['orders','invoices'].includes(activeTab) && <CustomerUnavailable type={activeTab} onNewRfq={startRfq} onSupport={() => navigateTab('support')} />}
 
       {/* TAB 1: RFQ WORKSPACE (SLICE S05) */}
-      {activeTab === 'rfqs' && (
+      {!isRfqModalOpen && activeTab === 'rfqs' && (
         <div>
           <div className="card shadow-sm border-0 rounded-3 mb-4">
             <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               <div>
-                <h5 className="card-title h6 mb-1 fw-bold">My Submitted Pattern RFQs</h5>
+                <h5 className="card-title h6 mb-1 fw-bold">Your quotation requests</h5>
                 <p className="text-muted small mb-0">
-                  Track requirements submitted to KPC Engineering for Wooden & Metallic industrial pattern manufacturing.
+                  Track your specifications, drawings, and engineering review status.
                 </p>
               </div>
               <button
@@ -592,10 +631,12 @@ export function CustomerPortal() {
                 }}
                 className="btn btn-primary btn-sm fw-bold px-3"
               >
-                + Submit New RFQ
+                + New RFQ
               </button>
             </div>
 
+            <div className="customer-list-toolbar"><label htmlFor="customer-field-1" className="customer-search"><CustomerIcon name="search" size={18}/><input aria-label="Search quotation requests" placeholder="Search requests by title or reference…" value={rfqSearch} onChange={e => setRfqSearch(e.target.value)}/></label><select id="customer-field-1" className="form-select" aria-label="Filter requests by status" value={rfqStatus} onChange={e => setRfqStatus(e.target.value)}><option value="all">All statuses</option>{[...new Set(myRfqs.map(r => r.status))].map(status => <option key={status} value={status}>{status.replaceAll('_',' ')}</option>)}</select></div>
+            {rfqError && <div className="alert alert-danger m-3" role="alert">{rfqError} <button className="btn btn-sm btn-outline-danger" onClick={fetchMyRfqs}>Try again</button></div>}
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
                 <thead className="table-light small">
@@ -617,20 +658,20 @@ export function CustomerPortal() {
                         Loading your submitted requirements…
                       </td>
                     </tr>
-                  ) : myRfqs.length === 0 ? (
+                  ) : myRfqs.filter(r => (rfqStatus === 'all' || r.status === rfqStatus) && `${r.title} ${r.rfq_number}`.toLowerCase().includes(rfqSearch.toLowerCase())).length === 0 ? (
                     <tr>
                       <td colSpan="8" className="text-center py-5 text-muted">
-                        <p className="mb-2">You haven't submitted any RFQs yet.</p>
+                        <p className="mb-2">{rfqError ? 'Requests are currently unavailable.' : myRfqs.length ? 'No requests match your search.' : 'You haven’t submitted any requests yet.'}</p>
                         <button
                           onClick={() => setIsRfqModalOpen(true)}
                           className="btn btn-outline-primary btn-sm"
                         >
-                          Create Your First Pattern RFQ →
+                          Create a new RFQ →
                         </button>
                       </td>
                     </tr>
                   ) : (
-                    myRfqs.map((rfq) => (
+                    myRfqs.filter(r => (rfqStatus === 'all' || r.status === rfqStatus) && `${r.title} ${r.rfq_number}`.toLowerCase().includes(rfqSearch.toLowerCase())).map((rfq) => (
                       <tr key={rfq.id}>
                         <td>
                           <span className="fw-bold text-dark">{rfq.rfq_number}</span>
@@ -687,171 +728,136 @@ export function CustomerPortal() {
         </div>
       )}
 
-      {/* TAB 2: COMPANY PROFILE & SETTINGS (SLICE S02) */}
-      {activeTab === 'profile' && (
-        <div className="row g-4">
-          <div className="col-12 col-lg-6">
-            <div className="card shadow-sm border-0 rounded-3 h-100">
-              <div className="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h5 className="card-title h6 mb-0 fw-bold">Business Profile Details</h5>
-                {!isEditing && (
-                  <button
-                    onClick={() => {
-                      setEditData({
-                        company_name: profile?.company_name || '',
-                        contact_person: profile?.contact_person || '',
-                        phone: profile?.phone || '',
-                        gstin: profile?.gstin || '',
-                        address: profile?.address || '',
-                      });
-                      setIsEditing(true);
-                    }}
-                    className="btn btn-outline-primary btn-sm"
-                  >
-                    Edit Profile
-                  </button>
-                )}
-              </div>
-
-              <div className="card-body">
-                {isEditing ? (
-                  <form onSubmit={handleSaveProfile}>
-                    <div className="mb-2">
-                      <label className="form-label small fw-bold mb-1">Company Name</label>
-                      <input
-                        name="company_name"
-                        type="text"
-                        className="form-control form-control-sm"
-                        value={editData.company_name}
-                        onChange={handleProfileInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-2">
-                      <label className="form-label small fw-bold mb-1">Contact Person</label>
-                      <input
-                        name="contact_person"
-                        type="text"
-                        className="form-control form-control-sm"
-                        value={editData.contact_person}
-                        onChange={handleProfileInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-2">
-                      <label className="form-label small fw-bold mb-1">Phone Number</label>
-                      <input
-                        name="phone"
-                        type="tel"
-                        className="form-control form-control-sm"
-                        value={editData.phone}
-                        onChange={handleProfileInputChange}
-                        required
-                      />
-                    </div>
-
-                    <div className="mb-2">
-                      <label className="form-label small fw-bold mb-1">GSTIN Number</label>
-                      <input
-                        name="gstin"
-                        type="text"
-                        className="form-control form-control-sm text-uppercase"
-                        value={editData.gstin}
-                        onChange={handleProfileInputChange}
-                      />
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label small fw-bold mb-1">Plant / Delivery Address</label>
-                      <textarea
-                        name="address"
-                        rows="2"
-                        className="form-control form-control-sm"
-                        value={editData.address}
-                        onChange={handleProfileInputChange}
-                      ></textarea>
-                    </div>
-
-                    <div className="d-flex gap-2">
-                      <button
-                        type="submit"
-                        className="btn btn-primary btn-sm fw-bold"
-                        disabled={saveLoading}
-                      >
-                        {saveLoading ? 'Saving…' : 'Save Changes'}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={() => setIsEditing(false)}
-                        disabled={saveLoading}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div>
-                    <p className="mb-1 text-secondary small">Company Name</p>
-                    <h6 className="fw-bold mb-3">{profile?.company_name || 'Individual Customer'}</h6>
-
-                    <p className="mb-1 text-secondary small">Contact Person</p>
-                    <p className="mb-3">{profile?.contact_person || user?.email}</p>
-
-                    <p className="mb-1 text-secondary small">Phone Number</p>
-                    <p className="mb-3">{profile?.phone || 'Not provided'}</p>
-
-                    <p className="mb-1 text-secondary small">GSTIN Registration</p>
-                    <p className="mb-3">
-                      <span className="badge bg-light text-dark border">
-                        {profile?.gstin || 'Unregistered / Inter-state'}
-                      </span>
-                    </p>
-
-                    <p className="mb-1 text-secondary small">Manufacturing Plant / Billing Address</p>
-                    <p className="small text-muted mb-4">{profile?.address || 'Ahmedabad, Gujarat'}</p>
-
-                    <div className="border-top pt-3">
-                      <button
-                        onClick={() => setIsPasswordModalOpen(true)}
-                        className="btn btn-outline-secondary btn-sm w-100"
-                      >
-                        Change Account Password
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {!isRfqModalOpen && activeTab === 'profile' && <CustomerProfile profile={profile} email={user?.email || ''} editing={isEditing} data={editData} onChange={handleProfileInputChange} onEdit={() => { setEditData({ company_name: profile?.company_name || '', contact_person: profile?.contact_person || '', phone: profile?.phone || '', gstin: profile?.gstin || '', address: profile?.address || '' }); setIsEditing(true); }} onCancel={() => setIsEditing(false)} onSave={handleSaveProfile} saving={saveLoading} onPassword={() => setIsPasswordModalOpen(true)} />}
 
       {/* TAB 3: SUPPORT & INQUIRIES WORKSPACE (SLICE S14) */}
-      {activeTab === 'support' && (
-        <div>
+      {!isRfqModalOpen && activeTab === 'support' && (
+        <div className="customer-support-grid">
+          <section className="card customer-support-composer" aria-labelledby="support-compose-title">
+            <div className="customer-section-header"><h2 id="support-compose-title"><span className="customer-heading-icon"><CustomerIcon name="support"/></span> Raise a support ticket</h2></div>
+            <p className="customer-support-intro">Tell us what you need. Our team will follow up here.</p>
+            {ticketFileError && <div className="alert alert-danger mx-3" role="alert">{ticketFileError}</div>}
+              <form onSubmit={handleCreateTicket}>
+                <div className="modal-body py-2">
+                  <div className="row g-3 mb-3">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="customer-field-11" className="form-label small fw-bold">Ticket Classification *</label>
+                      <select id="customer-field-11"
+                        className="form-select form-select-sm"
+                        value={ticketForm.ticket_type}
+                        onChange={(e) => setTicketForm({ ...ticketForm, ticket_type: e.target.value })}
+                        required
+                      >
+                        <option value="inquiry">General Technical Inquiry</option>
+                        <option value="complaint">Quality or Manufacturing Complaint</option>
+                        <option value="order_issue">Order / Invoice Issue</option>
+                        <option value="technical_support">CAD / Blueprint Technical Support</option>
+                      </select>
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="customer-field-12" className="form-label small fw-bold">Link Related Order (Optional)</label>
+                      <select id="customer-field-12"
+                        className="form-select form-select-sm"
+                        value={ticketForm.order_id}
+                        onChange={(e) => setTicketForm({ ...ticketForm, order_id: e.target.value })}
+                      >
+                        <option value="">-- No Related Order --</option>
+                        {customerContext.orders.map((ord) => (
+                          <option key={ord.id} value={ord.id}>
+                            {ord.order_number} ({ord.status})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="row g-3 mb-3">
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="customer-field-13" className="form-label small fw-bold">Subject / Title *</label>
+                      <input id="customer-field-13"
+                        type="text"
+                        className="form-control form-control-sm"
+                        placeholder="Brief summary of your query or issue..."
+                        value={ticketForm.subject}
+                        onChange={(e) => setTicketForm({ ...ticketForm, subject: e.target.value })}
+                        required
+                        minLength={3}
+                        maxLength={255}
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-6">
+                      <label htmlFor="customer-field-14" className="form-label small fw-bold">Link Related RFQ (Optional)</label>
+                      <select id="customer-field-14"
+                        className="form-select form-select-sm"
+                        value={ticketForm.rfq_id}
+                        onChange={(e) => setTicketForm({ ...ticketForm, rfq_id: e.target.value })}
+                      >
+                        <option value="">-- No Related RFQ --</option>
+                        {customerContext.rfqs.map((rfq) => (
+                          <option key={rfq.id} value={rfq.id}>
+                            {rfq.rfq_number} — {rfq.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="customer-field-15" className="form-label small fw-bold">Detailed Description / Message *</label>
+                    <textarea id="customer-field-15"
+                      rows={4}
+                      className="form-control form-control-sm"
+                      placeholder="Please provide full details, dimensions, tolerances, or observations so our engineering team can review..."
+                      value={ticketForm.message}
+                      onChange={(e) => setTicketForm({ ...ticketForm, message: e.target.value })}
+                      required
+                      minLength={5}
+                    ></textarea>
+                  </div>
+
+                  <div className="mb-2">
+                    <label htmlFor="customer-field-16" className="form-label small fw-bold">
+                      Attach Inspection Photos or Reports (Max 2 files, 20 MB each)
+                    </label>
+                    <input id="customer-field-16"
+                      type="file"
+                      className="form-control form-control-sm"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files);
+                        if (files.length > 2) {
+                          setTicketFileError('You can attach at most 2 files per submission.');
+                          e.target.value = '';
+                          setTicketFiles([]);
+                        } else {
+                          setTicketFileError('');
+                          setTicketFiles(files);
+                        }
+                      }}
+                    />
+                    <div className="form-text small text-muted">
+                      Accepted formats: JPG, PNG, PDF. Only you and the KPC team can access your attachments.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer border-0 pt-0">
+                  <button type="submit" className="btn btn-primary" disabled={submittingTicket}><CustomerIcon name="arrow" size={18}/>{submittingTicket ? 'Submitting…' : 'Submit support ticket'}</button>
+                </div>
+              </form>
+          </section>
           <div className="card shadow-sm border-0 rounded-3 mb-4">
             <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
               <div>
-                <h5 className="card-title h6 mb-1 fw-bold">Support Inquiries & Complaints (Slice S14)</h5>
+                <h5 className="card-title h6 mb-1 fw-bold">Your support tickets</h5>
                 <p className="text-muted small mb-0">
-                  Direct correspondence with KPC Management for technical pattern requirements, order complaints, and manufacturing queries.
+                  Ask a question, report an issue, or follow up with our team.
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  setTicketForm({ ticket_type: 'inquiry', subject: '', message: '', order_id: '', rfq_id: '' });
-                  setTicketFiles([]);
-                  setTicketFileError('');
-                  fetchCustomerContext();
-                  setIsTicketModalOpen(true);
-                }}
-                className="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-2"
-              >
-                <span>➕</span> Raise Inquiry / Complaint
-              </button>
+
             </div>
 
             {/* Filter Toolbar */}
@@ -894,12 +900,13 @@ export function CustomerPortal() {
 
             {/* Ticket List */}
             <div className="card-body p-0">
+              {supportError && <div className="alert alert-danger m-3" role="alert">{supportError} <button className="btn btn-sm btn-outline-danger" onClick={fetchSupportTickets}>Try again</button></div>}
               {loadingTickets ? (
                 <div className="p-4 text-center text-muted">
                   <div className="spinner-border spinner-border-sm text-primary me-2"></div>
                   Loading support tickets...
                 </div>
-              ) : supportTickets.filter((t) => {
+              ) : supportError ? <div className="customer-empty">Tickets are currently unavailable. Please try again.</div> : supportTickets.filter((t) => {
                   if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
                   if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
                   return true;
@@ -913,7 +920,7 @@ export function CustomerPortal() {
                   <button
                     onClick={() => {
                       fetchCustomerContext();
-                      setIsTicketModalOpen(true);
+                      document.getElementById('customer-field-11')?.focus();
                     }}
                     className="btn btn-outline-primary btn-sm"
                   >
@@ -1016,40 +1023,24 @@ export function CustomerPortal() {
 
       {/* 3-STEP RFQ SUBMISSION MODAL (SLICE S05) */}
       {isRfqModalOpen && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
-          tabIndex="-1"
-        >
+        <div className="customer-rfq-wizard" role="region" aria-label="New request for quotation">
           <div className="modal-dialog modal-dialog-centered modal-lg">
             <div className="modal-content border-0 shadow-lg rounded-4 p-3 p-md-4">
               <div className="modal-header border-0 pb-2">
                 <div>
-                  <h5 className="modal-title fw-bold">Request For Quotation (RFQ)</h5>
-                  <p className="text-muted small mb-0">Step {rfqStep} of 3: Pattern Engineering Requirements</p>
+                  <h2 className="modal-title fw-bold">{['Product requirements', 'CAD & specifications', 'Review your request'][rfqStep - 1]}</h2>
+                  <p className="text-muted small mb-0">Step {rfqStep} of 3: Share your manufacturing requirements</p>
                 </div>
                 <button
                   type="button"
                   className="btn-close"
+            aria-label="Close"
                   onClick={() => setIsRfqModalOpen(false)}
                   disabled={submittingRfq}
                 ></button>
               </div>
 
-              {/* Step indicator bar */}
-              <div className="px-3 mb-4">
-                <div className="progress" style={{ height: '6px' }}>
-                  <div
-                    className="progress-bar bg-primary"
-                    style={{ width: `${(rfqStep / 3) * 100}%` }}
-                  ></div>
-                </div>
-                <div className="d-flex justify-content-between mt-2 small text-muted">
-                  <span className={rfqStep >= 1 ? 'fw-bold text-primary' : ''}>1. Pattern Info</span>
-                  <span className={rfqStep >= 2 ? 'fw-bold text-primary' : ''}>2. Technical Specs</span>
-                  <span className={rfqStep >= 3 ? 'fw-bold text-primary' : ''}>3. Review & Submit</span>
-                </div>
-              </div>
+              <ol className="customer-stepper" aria-label="RFQ progress">{['Product requirement', 'CAD & specifications', 'Review & submit'].map((label, index) => <li key={label} className={rfqStep === index + 1 ? 'is-current' : rfqStep > index + 1 ? 'is-complete' : ''} aria-current={rfqStep === index + 1 ? 'step' : undefined}><span>{rfqStep > index + 1 ? <CustomerIcon name="check" size={19}/> : index + 1}</span><strong>{label}</strong><small>{rfqStep === index + 1 ? 'In progress' : rfqStep > index + 1 ? 'Completed' : 'Pending'}</small></li>)}</ol>
 
               <div className="modal-body pt-0">
                 <form onSubmit={handleRfqSubmit}>
@@ -1096,8 +1087,8 @@ export function CustomerPortal() {
 
                       {rfqForm.rfq_type === 'standard' && (
                         <div className="col-12">
-                          <label className="form-label small fw-bold">Select Catalogue Product *</label>
-                          <select
+                          <label htmlFor="customer-field-2" className="form-label small fw-bold">Select Catalogue Product *</label>
+                          <select id="customer-field-2"
                             className="form-select"
                             value={rfqForm.product_id}
                             onChange={(e) => {
@@ -1123,8 +1114,8 @@ export function CustomerPortal() {
                       )}
 
                       <div className="col-12 col-md-8">
-                        <label className="form-label small fw-bold">Pattern / Part Title *</label>
-                        <input
+                        <label htmlFor="customer-field-3" className="form-label small fw-bold">Pattern / Part Title *</label>
+                        <input id="customer-field-3"
                           type="text"
                           className="form-control"
                           placeholder="e.g. 500mm Impeller Casting Pattern"
@@ -1135,8 +1126,8 @@ export function CustomerPortal() {
                       </div>
 
                       <div className="col-12 col-md-4">
-                        <label className="form-label small fw-bold">Quantity (Pcs) *</label>
-                        <input
+                        <label htmlFor="customer-field-4" className="form-label small fw-bold">Quantity (Pcs) *</label>
+                        <input id="customer-field-4"
                           type="number"
                           className="form-control"
                           min="1"
@@ -1147,8 +1138,8 @@ export function CustomerPortal() {
                       </div>
 
                       <div className="col-12 col-md-6">
-                        <label className="form-label small fw-bold">Material Specification *</label>
-                        <select
+                        <label htmlFor="customer-field-5" className="form-label small fw-bold">Material Specification *</label>
+                        <select id="customer-field-5"
                           className="form-select"
                           value={rfqForm.material}
                           onChange={(e) => setRfqForm({ ...rfqForm, material: e.target.value })}
@@ -1163,8 +1154,8 @@ export function CustomerPortal() {
                       </div>
 
                       <div className="col-12 col-md-6">
-                        <label className="form-label small fw-bold">Target Delivery Date</label>
-                        <input
+                        <label htmlFor="customer-field-6" className="form-label small fw-bold">Target Delivery Date</label>
+                        <input id="customer-field-6"
                           type="date"
                           className="form-control"
                           value={rfqForm.target_delivery_date}
@@ -1175,8 +1166,8 @@ export function CustomerPortal() {
                       </div>
 
                       <div className="col-12">
-                        <label className="form-label small fw-bold">Part Description & Usage</label>
-                        <textarea
+                        <label htmlFor="customer-field-7" className="form-label small fw-bold">Part Description & Usage</label>
+                        <textarea id="customer-field-7"
                           rows="2"
                           className="form-control"
                           placeholder="Describe casting application, foundry method (sand / die / investment), etc."
@@ -1193,13 +1184,15 @@ export function CustomerPortal() {
                           className="btn btn-primary"
                           onClick={() => {
                             if (!rfqForm.title.trim()) {
-                              alert('Please enter a pattern title.');
+                              setFeedback({ error: 'Please enter a pattern title.', success: '' });
                               return;
                             }
                             if (rfqForm.rfq_type === 'standard' && !rfqForm.product_id) {
-                              alert('Please select a catalogue product.');
+                              setFeedback({ error: 'Please select a catalogue product.', success: '' });
                               return;
                             }
+                            if (!Number.isInteger(Number(rfqForm.quantity)) || Number(rfqForm.quantity) < 1) { setFeedback({ error: 'Enter a whole-number quantity of at least 1.', success: '' }); return; }
+                            setFeedback({ error: '', success: '' });
                             setRfqStep(2);
                           }}
                         >
@@ -1213,8 +1206,8 @@ export function CustomerPortal() {
                   {rfqStep === 2 && (
                     <div className="row g-3">
                       <div className="col-12 col-md-6">
-                        <label className="form-label small fw-bold">Dimensions (Length x Width x Height)</label>
-                        <input
+                        <label htmlFor="customer-field-8" className="form-label small fw-bold">Dimensions (Length x Width x Height)</label>
+                        <input id="customer-field-8"
                           type="text"
                           className="form-control"
                           placeholder="e.g. 600mm x 400mm x 250mm"
@@ -1226,8 +1219,8 @@ export function CustomerPortal() {
                       </div>
 
                       <div className="col-12 col-md-6">
-                        <label className="form-label small fw-bold">Engineering Allowances & Tolerances</label>
-                        <input
+                        <label htmlFor="customer-field-9" className="form-label small fw-bold">Engineering Allowances & Tolerances</label>
+                        <input id="customer-field-9"
                           type="text"
                           className="form-control"
                           placeholder="e.g. ±0.1mm tolerance, 1.5% shrinkage"
@@ -1239,8 +1232,8 @@ export function CustomerPortal() {
                       </div>
 
                       <div className="col-12">
-                        <label className="form-label small fw-bold">Special Tooling Notes</label>
-                        <textarea
+                        <label htmlFor="customer-field-10" className="form-label small fw-bold">Special Tooling Notes</label>
+                        <textarea id="customer-field-10"
                           rows="2"
                           className="form-control"
                           placeholder="Core box requirements, loose pieces, draft angles, or finishing coat instructions."
@@ -1270,7 +1263,7 @@ export function CustomerPortal() {
                               className={`btn btn-outline-primary btn-sm mb-2 ${selectedFiles.length >= 2 ? 'disabled' : ''}`}
                               style={{ cursor: selectedFiles.length >= 2 ? 'not-allowed' : 'pointer' }}
                             >
-                              📁 Choose Technical Drawings / CAD Files
+                              Browse drawings & CAD files
                             </label>
                             <p className="small text-muted mb-0">
                               Allowed formats: <strong>PDF, PNG, JPG, WEBP, STEP (.step/.stp), IGES (.iges/.igs), STL, DWG, DXF</strong>
@@ -1348,8 +1341,8 @@ export function CustomerPortal() {
                             <div className="col-6"><strong>Type:</strong> <span className="text-uppercase badge bg-secondary">{rfqForm.rfq_type}</span></div>
                             <div className="col-6"><strong>Material:</strong> {rfqForm.material}</div>
                             <div className="col-6"><strong>Quantity:</strong> {rfqForm.quantity} pcs</div>
-                            <div className="col-6"><strong>Dimensions:</strong> {rfqForm.dimensions || 'As per drawing'}</div>
-                            <div className="col-6"><strong>Target Date:</strong> {rfqForm.target_delivery_date || 'Standard lead time'}</div>
+                            <div className="col-6"><strong>Dimensions:</strong> {rfqForm.dimensions || 'Not specified'}</div>
+                            <div className="col-6"><strong>Target Date:</strong> {rfqForm.target_delivery_date || 'Not specified'}</div>
                             {rfqForm.specifications && (
                               <div className="col-12"><strong>Specifications:</strong> {rfqForm.specifications}</div>
                             )}
@@ -1367,7 +1360,7 @@ export function CustomerPortal() {
                         <div className="card border-0 bg-light p-3 rounded-3 mb-3">
                           <h6 className="fw-bold small mb-1">Company Contact Information (From Profile)</h6>
                           <p className="small text-muted mb-0">
-                            <strong>{profile?.company_name || 'Individual Customer'}</strong> · Contact: {profile?.contact_person} · {profile?.phone}
+                            <strong>{profile?.company_name || 'Your business'}</strong> · Contact: {profile?.contact_person} · {profile?.phone}
                           </p>
                         </div>
                       </div>
@@ -1398,191 +1391,6 @@ export function CustomerPortal() {
         </div>
       )}
 
-      {/* TAB 3: SUPPORT & INQUIRIES WORKSPACE (SLICE S14) */}
-      {activeTab === 'support' && (
-        <div>
-          <div className="card shadow-sm border-0 rounded-3 mb-4">
-            <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-              <div>
-                <h5 className="card-title h6 mb-1 fw-bold">Support Inquiries & Complaints (Slice S14)</h5>
-                <p className="text-muted small mb-0">
-                  Direct correspondence with KPC Management for technical pattern requirements, order complaints, and manufacturing queries.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setTicketForm({ ticket_type: 'inquiry', subject: '', message: '', order_id: '', rfq_id: '' });
-                  setTicketFiles([]);
-                  setTicketFileError('');
-                  fetchCustomerContext();
-                  setIsTicketModalOpen(true);
-                }}
-                className="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-2"
-              >
-                <span>➕</span> Raise Inquiry / Complaint
-              </button>
-            </div>
-
-            {/* Filter Toolbar */}
-            <div className="card-body bg-light border-bottom py-2">
-              <div className="row g-2 align-items-center">
-                <div className="col-auto">
-                  <span className="small text-secondary fw-bold">Status:</span>
-                </div>
-                <div className="col-auto d-flex gap-1">
-                  {['all', 'open', 'in_progress', 'resolved', 'closed'].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      className={`btn btn-sm ${ticketStatusFilter === st ? 'btn-primary' : 'btn-outline-secondary bg-white'}`}
-                      style={{ fontSize: '0.8rem', padding: '0.2rem 0.55rem' }}
-                      onClick={() => setTicketStatusFilter(st)}
-                    >
-                      {st === 'all' ? 'All' : st.replace('_', ' ').toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="col-auto ms-auto d-flex align-items-center gap-2">
-                  <span className="small text-secondary fw-bold">Type:</span>
-                  <select
-                    className="form-select form-select-sm"
-                    style={{ width: '160px', fontSize: '0.82rem' }}
-                    value={ticketTypeFilter}
-                    onChange={(e) => setTicketTypeFilter(e.target.value)}
-                  >
-                    <option value="all">All Types</option>
-                    <option value="inquiry">Inquiry</option>
-                    <option value="complaint">Complaint</option>
-                    <option value="order_issue">Order Issue</option>
-                    <option value="technical_support">Technical Support</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Ticket List */}
-            <div className="card-body p-0">
-              {loadingTickets ? (
-                <div className="p-4 text-center text-muted">
-                  <div className="spinner-border spinner-border-sm text-primary me-2"></div>
-                  Loading support tickets...
-                </div>
-              ) : supportTickets.filter((t) => {
-                  if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
-                  if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
-                  return true;
-                }).length === 0 ? (
-                <div className="p-5 text-center">
-                  <div className="display-6 text-muted mb-3">💬</div>
-                  <h6 className="fw-bold text-dark">No support tickets found</h6>
-                  <p className="text-muted small mb-3">
-                    Have a technical question about your casting patterns or need help with an order?
-                  </p>
-                  <button
-                    onClick={() => {
-                      fetchCustomerContext();
-                      setIsTicketModalOpen(true);
-                    }}
-                    className="btn btn-outline-primary btn-sm"
-                  >
-                    Raise Your First Ticket
-                  </button>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light small text-uppercase">
-                      <tr>
-                        <th className="ps-3">Ticket #</th>
-                        <th>Type</th>
-                        <th>Subject</th>
-                        <th>Associated Ref</th>
-                        <th>Status</th>
-                        <th>Messages</th>
-                        <th>Last Activity</th>
-                        <th className="text-end pe-3">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="small">
-                      {supportTickets
-                        .filter((t) => {
-                          if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
-                          if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
-                          return true;
-                        })
-                        .map((t) => (
-                          <tr key={t.id}>
-                            <td className="ps-3 fw-bold text-primary font-monospace">{t.ticket_number}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  t.ticket_type === 'complaint'
-                                    ? 'bg-danger'
-                                    : t.ticket_type === 'order_issue'
-                                    ? 'bg-warning text-dark'
-                                    : t.ticket_type === 'technical_support'
-                                    ? 'bg-primary'
-                                    : 'bg-info text-dark'
-                                }`}
-                              >
-                                {t.ticket_type.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="fw-bold text-dark">{t.subject}</span>
-                            </td>
-                            <td>
-                              {t.order_number ? (
-                                <span className="badge bg-secondary font-monospace">ORD: {t.order_number}</span>
-                              ) : t.rfq_number ? (
-                                <span className="badge bg-light text-dark border font-monospace">RFQ: {t.rfq_number}</span>
-                              ) : (
-                                <span className="text-muted small">—</span>
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  t.status === 'open'
-                                    ? 'bg-primary'
-                                    : t.status === 'in_progress'
-                                    ? 'bg-warning text-dark'
-                                    : t.status === 'resolved'
-                                    ? 'bg-success'
-                                    : 'bg-secondary'
-                                }`}
-                              >
-                                {t.status.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border">
-                                💬 {t.message_count}
-                              </span>
-                            </td>
-                            <td className="text-muted">
-                              {new Date(t.updated_at).toLocaleDateString()}
-                            </td>
-                            <td className="text-end pe-3">
-                              <button
-                                onClick={() => handleOpenTicket(t.id)}
-                                className="btn btn-outline-primary btn-sm fw-bold"
-                              >
-                                Open Conversation
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* RFQ DETAIL MODAL */}
       {selectedRfqDetail && (
         <div
@@ -1602,6 +1410,7 @@ export function CustomerPortal() {
                 <button
                   type="button"
                   className="btn-close"
+            aria-label="Close"
                   onClick={() => setSelectedRfqDetail(null)}
                 ></button>
               </div>
@@ -1756,191 +1565,6 @@ export function CustomerPortal() {
         </div>
       )}
 
-      {/* TAB 3: SUPPORT & INQUIRIES WORKSPACE (SLICE S14) */}
-      {activeTab === 'support' && (
-        <div>
-          <div className="card shadow-sm border-0 rounded-3 mb-4">
-            <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-              <div>
-                <h5 className="card-title h6 mb-1 fw-bold">Support Inquiries & Complaints (Slice S14)</h5>
-                <p className="text-muted small mb-0">
-                  Direct correspondence with KPC Management for technical pattern requirements, order complaints, and manufacturing queries.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setTicketForm({ ticket_type: 'inquiry', subject: '', message: '', order_id: '', rfq_id: '' });
-                  setTicketFiles([]);
-                  setTicketFileError('');
-                  fetchCustomerContext();
-                  setIsTicketModalOpen(true);
-                }}
-                className="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-2"
-              >
-                <span>➕</span> Raise Inquiry / Complaint
-              </button>
-            </div>
-
-            {/* Filter Toolbar */}
-            <div className="card-body bg-light border-bottom py-2">
-              <div className="row g-2 align-items-center">
-                <div className="col-auto">
-                  <span className="small text-secondary fw-bold">Status:</span>
-                </div>
-                <div className="col-auto d-flex gap-1">
-                  {['all', 'open', 'in_progress', 'resolved', 'closed'].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      className={`btn btn-sm ${ticketStatusFilter === st ? 'btn-primary' : 'btn-outline-secondary bg-white'}`}
-                      style={{ fontSize: '0.8rem', padding: '0.2rem 0.55rem' }}
-                      onClick={() => setTicketStatusFilter(st)}
-                    >
-                      {st === 'all' ? 'All' : st.replace('_', ' ').toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="col-auto ms-auto d-flex align-items-center gap-2">
-                  <span className="small text-secondary fw-bold">Type:</span>
-                  <select
-                    className="form-select form-select-sm"
-                    style={{ width: '160px', fontSize: '0.82rem' }}
-                    value={ticketTypeFilter}
-                    onChange={(e) => setTicketTypeFilter(e.target.value)}
-                  >
-                    <option value="all">All Types</option>
-                    <option value="inquiry">Inquiry</option>
-                    <option value="complaint">Complaint</option>
-                    <option value="order_issue">Order Issue</option>
-                    <option value="technical_support">Technical Support</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Ticket List */}
-            <div className="card-body p-0">
-              {loadingTickets ? (
-                <div className="p-4 text-center text-muted">
-                  <div className="spinner-border spinner-border-sm text-primary me-2"></div>
-                  Loading support tickets...
-                </div>
-              ) : supportTickets.filter((t) => {
-                  if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
-                  if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
-                  return true;
-                }).length === 0 ? (
-                <div className="p-5 text-center">
-                  <div className="display-6 text-muted mb-3">💬</div>
-                  <h6 className="fw-bold text-dark">No support tickets found</h6>
-                  <p className="text-muted small mb-3">
-                    Have a technical question about your casting patterns or need help with an order?
-                  </p>
-                  <button
-                    onClick={() => {
-                      fetchCustomerContext();
-                      setIsTicketModalOpen(true);
-                    }}
-                    className="btn btn-outline-primary btn-sm"
-                  >
-                    Raise Your First Ticket
-                  </button>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light small text-uppercase">
-                      <tr>
-                        <th className="ps-3">Ticket #</th>
-                        <th>Type</th>
-                        <th>Subject</th>
-                        <th>Associated Ref</th>
-                        <th>Status</th>
-                        <th>Messages</th>
-                        <th>Last Activity</th>
-                        <th className="text-end pe-3">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="small">
-                      {supportTickets
-                        .filter((t) => {
-                          if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
-                          if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
-                          return true;
-                        })
-                        .map((t) => (
-                          <tr key={t.id}>
-                            <td className="ps-3 fw-bold text-primary font-monospace">{t.ticket_number}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  t.ticket_type === 'complaint'
-                                    ? 'bg-danger'
-                                    : t.ticket_type === 'order_issue'
-                                    ? 'bg-warning text-dark'
-                                    : t.ticket_type === 'technical_support'
-                                    ? 'bg-primary'
-                                    : 'bg-info text-dark'
-                                }`}
-                              >
-                                {t.ticket_type.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="fw-bold text-dark">{t.subject}</span>
-                            </td>
-                            <td>
-                              {t.order_number ? (
-                                <span className="badge bg-secondary font-monospace">ORD: {t.order_number}</span>
-                              ) : t.rfq_number ? (
-                                <span className="badge bg-light text-dark border font-monospace">RFQ: {t.rfq_number}</span>
-                              ) : (
-                                <span className="text-muted small">—</span>
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  t.status === 'open'
-                                    ? 'bg-primary'
-                                    : t.status === 'in_progress'
-                                    ? 'bg-warning text-dark'
-                                    : t.status === 'resolved'
-                                    ? 'bg-success'
-                                    : 'bg-secondary'
-                                }`}
-                              >
-                                {t.status.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border">
-                                💬 {t.message_count}
-                              </span>
-                            </td>
-                            <td className="text-muted">
-                              {new Date(t.updated_at).toLocaleDateString()}
-                            </td>
-                            <td className="text-end pe-3">
-                              <button
-                                onClick={() => handleOpenTicket(t.id)}
-                                className="btn btn-outline-primary btn-sm fw-bold"
-                              >
-                                Open Conversation
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* IN-BROWSER FILE PREVIEW MODAL (SLICE S06) */}
       {previewFile && (
         <div
@@ -1974,6 +1598,7 @@ export function CustomerPortal() {
                   <button
                     type="button"
                     className="btn-close"
+            aria-label="Close"
                     onClick={() => setPreviewFile(null)}
                   ></button>
                 </div>
@@ -2015,161 +1640,6 @@ export function CustomerPortal() {
         </div>
       )}
 
-
-      {/* RAISE SUPPORT INQUIRY / COMPLAINT MODAL (SLICE S14) */}
-      {isTicketModalOpen && (
-        <div
-          className="modal show d-block"
-          style={{ backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
-          tabIndex="-1"
-        >
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content border-0 shadow-lg rounded-4 p-3 p-md-4">
-              <div className="modal-header border-0 pb-2">
-                <div>
-                  <h5 className="modal-title fw-bold">Raise Support Inquiry or Complaint</h5>
-                  <p className="text-muted small mb-0">REQ-30 · Direct communication with KPC engineering & management</p>
-                </div>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setIsTicketModalOpen(false)}
-                ></button>
-              </div>
-
-              {ticketFileError && (
-                <div className="alert alert-danger small py-2">{ticketFileError}</div>
-              )}
-
-              <form onSubmit={handleCreateTicket}>
-                <div className="modal-body py-2">
-                  <div className="row g-3 mb-3">
-                    <div className="col-12 col-md-6">
-                      <label className="form-label small fw-bold">Ticket Classification *</label>
-                      <select
-                        className="form-select form-select-sm"
-                        value={ticketForm.ticket_type}
-                        onChange={(e) => setTicketForm({ ...ticketForm, ticket_type: e.target.value })}
-                        required
-                      >
-                        <option value="inquiry">General Technical Inquiry</option>
-                        <option value="complaint">Quality or Manufacturing Complaint</option>
-                        <option value="order_issue">Order / Invoice Issue</option>
-                        <option value="technical_support">CAD / Blueprint Technical Support</option>
-                      </select>
-                    </div>
-
-                    <div className="col-12 col-md-6">
-                      <label className="form-label small fw-bold">Link Related Order (Optional)</label>
-                      <select
-                        className="form-select form-select-sm"
-                        value={ticketForm.order_id}
-                        onChange={(e) => setTicketForm({ ...ticketForm, order_id: e.target.value })}
-                      >
-                        <option value="">-- No Related Order --</option>
-                        {customerContext.orders.map((ord) => (
-                          <option key={ord.id} value={ord.id}>
-                            {ord.order_number} ({ord.status})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="row g-3 mb-3">
-                    <div className="col-12 col-md-6">
-                      <label className="form-label small fw-bold">Subject / Title *</label>
-                      <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        placeholder="Brief summary of your query or issue..."
-                        value={ticketForm.subject}
-                        onChange={(e) => setTicketForm({ ...ticketForm, subject: e.target.value })}
-                        required
-                        minLength={3}
-                        maxLength={255}
-                      />
-                    </div>
-
-                    <div className="col-12 col-md-6">
-                      <label className="form-label small fw-bold">Link Related RFQ (Optional)</label>
-                      <select
-                        className="form-select form-select-sm"
-                        value={ticketForm.rfq_id}
-                        onChange={(e) => setTicketForm({ ...ticketForm, rfq_id: e.target.value })}
-                      >
-                        <option value="">-- No Related RFQ --</option>
-                        {customerContext.rfqs.map((rfq) => (
-                          <option key={rfq.id} value={rfq.id}>
-                            {rfq.rfq_number} — {rfq.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label small fw-bold">Detailed Description / Message *</label>
-                    <textarea
-                      rows={4}
-                      className="form-control form-control-sm"
-                      placeholder="Please provide full details, dimensions, tolerances, or observations so our engineering team can review..."
-                      value={ticketForm.message}
-                      onChange={(e) => setTicketForm({ ...ticketForm, message: e.target.value })}
-                      required
-                      minLength={5}
-                    ></textarea>
-                  </div>
-
-                  <div className="mb-2">
-                    <label className="form-label small fw-bold">
-                      Attach Inspection Photos or Reports (Max 2 files, 20 MB each)
-                    </label>
-                    <input
-                      type="file"
-                      className="form-control form-control-sm"
-                      accept=".jpg,.jpeg,.png,.pdf"
-                      multiple
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files);
-                        if (files.length > 2) {
-                          setTicketFileError('You can attach at most 2 files per submission.');
-                          e.target.value = '';
-                          setTicketFiles([]);
-                        } else {
-                          setTicketFileError('');
-                          setTicketFiles(files);
-                        }
-                      }}
-                    />
-                    <div className="form-text small text-muted">
-                      Accepted formats: JPG, PNG, PDF. Private storage with secure access control.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-footer border-0 pt-0">
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setIsTicketModalOpen(false)}
-                    disabled={submittingTicket}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary btn-sm fw-bold px-4"
-                    disabled={submittingTicket}
-                  >
-                    {submittingTicket ? 'Submitting Ticket...' : 'Submit Support Ticket'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* TICKET CONVERSATION & RESOLUTION MODAL (SLICE S14) */}
       {isTicketDetailOpen && selectedTicket && (
@@ -2221,7 +1691,7 @@ export function CustomerPortal() {
                 </div>
                 <button
                   type="button"
-                  className="btn-close align-self-start"
+                  className="btn-close align-self-start" aria-label="Close conversation"
                   onClick={() => setIsTicketDetailOpen(false)}
                 ></button>
               </div>
@@ -2375,195 +1845,10 @@ export function CustomerPortal() {
           </div>
         </div>
       )}
-      {/* TAB 3: SUPPORT & INQUIRIES WORKSPACE (SLICE S14) */}
-      {activeTab === 'support' && (
-        <div>
-          <div className="card shadow-sm border-0 rounded-3 mb-4">
-            <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-              <div>
-                <h5 className="card-title h6 mb-1 fw-bold">Support Inquiries & Complaints (Slice S14)</h5>
-                <p className="text-muted small mb-0">
-                  Direct correspondence with KPC Management for technical pattern requirements, order complaints, and manufacturing queries.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setTicketForm({ ticket_type: 'inquiry', subject: '', message: '', order_id: '', rfq_id: '' });
-                  setTicketFiles([]);
-                  setTicketFileError('');
-                  fetchCustomerContext();
-                  setIsTicketModalOpen(true);
-                }}
-                className="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-2"
-              >
-                <span>➕</span> Raise Inquiry / Complaint
-              </button>
-            </div>
-
-            {/* Filter Toolbar */}
-            <div className="card-body bg-light border-bottom py-2">
-              <div className="row g-2 align-items-center">
-                <div className="col-auto">
-                  <span className="small text-secondary fw-bold">Status:</span>
-                </div>
-                <div className="col-auto d-flex gap-1">
-                  {['all', 'open', 'in_progress', 'resolved', 'closed'].map((st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      className={`btn btn-sm ${ticketStatusFilter === st ? 'btn-primary' : 'btn-outline-secondary bg-white'}`}
-                      style={{ fontSize: '0.8rem', padding: '0.2rem 0.55rem' }}
-                      onClick={() => setTicketStatusFilter(st)}
-                    >
-                      {st === 'all' ? 'All' : st.replace('_', ' ').toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="col-auto ms-auto d-flex align-items-center gap-2">
-                  <span className="small text-secondary fw-bold">Type:</span>
-                  <select
-                    className="form-select form-select-sm"
-                    style={{ width: '160px', fontSize: '0.82rem' }}
-                    value={ticketTypeFilter}
-                    onChange={(e) => setTicketTypeFilter(e.target.value)}
-                  >
-                    <option value="all">All Types</option>
-                    <option value="inquiry">Inquiry</option>
-                    <option value="complaint">Complaint</option>
-                    <option value="order_issue">Order Issue</option>
-                    <option value="technical_support">Technical Support</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Ticket List */}
-            <div className="card-body p-0">
-              {loadingTickets ? (
-                <div className="p-4 text-center text-muted">
-                  <div className="spinner-border spinner-border-sm text-primary me-2"></div>
-                  Loading support tickets...
-                </div>
-              ) : supportTickets.filter((t) => {
-                  if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
-                  if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
-                  return true;
-                }).length === 0 ? (
-                <div className="p-5 text-center">
-                  <div className="display-6 text-muted mb-3">💬</div>
-                  <h6 className="fw-bold text-dark">No support tickets found</h6>
-                  <p className="text-muted small mb-3">
-                    Have a technical question about your casting patterns or need help with an order?
-                  </p>
-                  <button
-                    onClick={() => {
-                      fetchCustomerContext();
-                      setIsTicketModalOpen(true);
-                    }}
-                    className="btn btn-outline-primary btn-sm"
-                  >
-                    Raise Your First Ticket
-                  </button>
-                </div>
-              ) : (
-                <div className="table-responsive">
-                  <table className="table table-hover align-middle mb-0">
-                    <thead className="table-light small text-uppercase">
-                      <tr>
-                        <th className="ps-3">Ticket #</th>
-                        <th>Type</th>
-                        <th>Subject</th>
-                        <th>Associated Ref</th>
-                        <th>Status</th>
-                        <th>Messages</th>
-                        <th>Last Activity</th>
-                        <th className="text-end pe-3">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="small">
-                      {supportTickets
-                        .filter((t) => {
-                          if (ticketStatusFilter !== 'all' && t.status !== ticketStatusFilter) return false;
-                          if (ticketTypeFilter !== 'all' && t.ticket_type !== ticketTypeFilter) return false;
-                          return true;
-                        })
-                        .map((t) => (
-                          <tr key={t.id}>
-                            <td className="ps-3 fw-bold text-primary font-monospace">{t.ticket_number}</td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  t.ticket_type === 'complaint'
-                                    ? 'bg-danger'
-                                    : t.ticket_type === 'order_issue'
-                                    ? 'bg-warning text-dark'
-                                    : t.ticket_type === 'technical_support'
-                                    ? 'bg-primary'
-                                    : 'bg-info text-dark'
-                                }`}
-                              >
-                                {t.ticket_type.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="fw-bold text-dark">{t.subject}</span>
-                            </td>
-                            <td>
-                              {t.order_number ? (
-                                <span className="badge bg-secondary font-monospace">ORD: {t.order_number}</span>
-                              ) : t.rfq_number ? (
-                                <span className="badge bg-light text-dark border font-monospace">RFQ: {t.rfq_number}</span>
-                              ) : (
-                                <span className="text-muted small">—</span>
-                              )}
-                            </td>
-                            <td>
-                              <span
-                                className={`badge ${
-                                  t.status === 'open'
-                                    ? 'bg-primary'
-                                    : t.status === 'in_progress'
-                                    ? 'bg-warning text-dark'
-                                    : t.status === 'resolved'
-                                    ? 'bg-success'
-                                    : 'bg-secondary'
-                                }`}
-                              >
-                                {t.status.replace('_', ' ').toUpperCase()}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="badge bg-light text-dark border">
-                                💬 {t.message_count}
-                              </span>
-                            </td>
-                            <td className="text-muted">
-                              {new Date(t.updated_at).toLocaleDateString()}
-                            </td>
-                            <td className="text-end pe-3">
-                              <button
-                                onClick={() => handleOpenTicket(t.id)}
-                                className="btn btn-outline-primary btn-sm fw-bold"
-                              >
-                                Open Conversation
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       <PasswordChangeModal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
-    </PortalLayout>
+    </CustomerLayout>
   );
 }

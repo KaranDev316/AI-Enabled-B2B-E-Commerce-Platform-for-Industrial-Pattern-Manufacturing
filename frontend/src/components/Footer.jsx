@@ -1,9 +1,11 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import '../pages/LandingPage.css';
 import './Footer.css';
 
 export function Footer() {
+  const { pathname } = useLocation();
+  if (pathname === "/customer") return null;
   function backToTop() {
     window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }
