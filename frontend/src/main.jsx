@@ -11,12 +11,10 @@ import { RegisterPage } from './pages/RegisterPage';
 import { CustomerPortal } from './pages/CustomerPortal';
 import { EmployeePortal } from './pages/EmployeePortal';
 import { AdminPortal } from './pages/AdminPortal';
-
 import { Footer } from './components/Footer';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { TermsPage } from './pages/TermsPage';
-import { CataloguePage } from './pages/CataloguePage';
-import { LandingPage } from './pages/LandingPage';
+import { PublicHome, CataloguePage, ProductPage } from './pages/PublicCatalogue';
 
 function PublicNavigationScroll() {
   const { pathname, hash, key } = useLocation();
@@ -45,9 +43,10 @@ createRoot(document.getElementById('root')).render(
       <BrowserRouter>
         <PublicNavigationScroll />
         <div className="app-layout"><div className="app-content"><Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<PublicHome />} />
+          <Route path="/catalogue" element={<CataloguePage />} />
           <Route path="/products" element={<CataloguePage />} />
-          <Route path="/products/:productId" element={<CataloguePage />} />
+          <Route path="/products/:slug" element={<ProductPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route

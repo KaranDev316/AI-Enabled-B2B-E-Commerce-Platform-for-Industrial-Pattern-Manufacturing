@@ -33,3 +33,6 @@
   .site-footer-bottom > div { flex-direction: column; text-align: center; gap: 8px; }
   .site-footer-legal { margin-left: 0; justify-content: center; }
 }
+
+/* Public-page wrappers fill a viewport; the shared footer must not. */
+.kpc-public.site-footer { min-height: 0; }
