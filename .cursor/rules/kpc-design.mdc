@@ -1,0 +1,8 @@
+---
+description: Mandatory KPC design and integration instructions
+alwaysApply: true
+---
+
+Read and follow the repository root `AGENTS.md` before making changes. It is the canonical source for the project's AI coding instructions.
+
+UI work must follow the actual images indexed in `docs/ui-ux/README.md` and preserve the approved screens and route bindings listed in `AGENTS.md`. Do not introduce another visual design during feature work, integration, refactoring, or merge resolution. Keep changes simple and compare them visually with the supplied references.

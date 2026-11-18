@@ -2,6 +2,8 @@
 
 Source mockups grouped by portal. Open the screen for your task and use the global kit for shared controls and states.
 
+**These are the required visual references, not optional inspiration.** All AI-assisted UI work must follow the repository [design rules](../../AGENTS.md). Preserve the approved screen layouts and existing implementations; do not substitute a new visual direction during feature work or merges. Practical adaptations must remain consistent with these references and the project requirements.
+
 The [project context](../CONTEXT.md) and [requirements](../PRP.md) govern functionality. Some source mockups show older navigation and out-of-scope controls.
 
 ## Public
