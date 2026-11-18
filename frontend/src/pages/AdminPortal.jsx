@@ -360,6 +360,9 @@ export function AdminPortal() {
 
   return (
     <PortalLayout
+      sidebarItems={[{id:'catalogue',label:'Products & Categories'},{id:'rfqs',label:'Customer RFQs'},{id:'users',label:'Users & Employees'},{id:'support',label:'Support Tickets'},{to:'/catalogue',label:'Public Catalogue'},{to:'/',label:'Visit Website'}]}
+      activeSection={activeTab}
+      onSectionChange={setActiveTab}
       title="Admin Control Center"
       subtitle="KPC Operations, User Accounts & Manufacturing Administration"
       roleBadgeColor="danger"
@@ -387,36 +390,7 @@ export function AdminPortal() {
       )}
 
       {/* Navigation Pills */}
-      <ul className="nav nav-pills mb-4 gap-2">
-        <li className="nav-item"><button className={`nav-link fw-bold btn-sm ${activeTab === 'catalogue' ? 'active' : 'bg-white border'}`} onClick={() => setActiveTab('catalogue')}>Products & Categories</button></li>
-        <li className="nav-item">
-          <button
-            className={`nav-link fw-bold btn-sm ${activeTab === 'rfqs' ? 'active' : 'bg-white border'}`}
-            onClick={() => setActiveTab('rfqs')}
-          >
-            Incoming Customer RFQs (Slice S05)
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link fw-bold btn-sm ${activeTab === 'users' ? 'active' : 'bg-white border'}`}
-            onClick={() => setActiveTab('users')}
-          >
-            User & Employee Accounts (Slice S02)
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link fw-bold btn-sm ${activeTab === 'support' ? 'active' : 'bg-white border'}`}
-            onClick={() => {
-              setActiveTab('support');
-              fetchAdminTickets();
-            }}
-          >
-            Support Tickets Queue (Slice S14)
-          </button>
-        </li>
-      </ul>
+
 
       {activeTab === 'catalogue' && <AdminCatalogue />}
 

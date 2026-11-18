@@ -516,6 +516,9 @@ export function CustomerPortal() {
 
   return (
     <PortalLayout
+      sidebarItems={[{id:'rfqs',label:'My RFQs'},{id:'profile',label:'Company Profile'},{id:'support',label:'Support & Inquiries'},{to:'/catalogue',label:'Browse Catalogue'},{to:'/',label:'Visit Website'}]}
+      activeSection={activeTab}
+      onSectionChange={(section) => { setActiveTab(section); if (section === 'support') { fetchSupportTickets(); fetchCustomerContext(); } }}
       title="Customer Workspace"
       subtitle="B2B Manufacturing Requirement Portal · Khodel Pattern Craft"
       roleBadgeColor="primary"
@@ -557,36 +560,7 @@ export function CustomerPortal() {
       )}
 
       {/* Navigation Tabs */}
-      <ul className="nav nav-pills mb-4 gap-2">
-        <li className="nav-item">
-          <button
-            className={`nav-link fw-bold btn-sm ${activeTab === 'rfqs' ? 'active' : 'bg-white border'}`}
-            onClick={() => setActiveTab('rfqs')}
-          >
-            RFQs & Pattern Requirements (S05)
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link fw-bold btn-sm ${activeTab === 'profile' ? 'active' : 'bg-white border'}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            Company Profile & Account Details (S02)
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link fw-bold btn-sm ${activeTab === 'support' ? 'active' : 'bg-white border'}`}
-            onClick={() => {
-              setActiveTab('support');
-              fetchSupportTickets();
-              fetchCustomerContext();
-            }}
-          >
-            Support & Inquiries (Slice S14)
-          </button>
-        </li>
-      </ul>
+
 
       {/* TAB 1: RFQ WORKSPACE (SLICE S05) */}
       {activeTab === 'rfqs' && (

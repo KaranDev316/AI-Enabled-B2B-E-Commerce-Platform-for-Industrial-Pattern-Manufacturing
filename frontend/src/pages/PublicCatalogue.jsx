@@ -2,6 +2,7 @@ import React,{useEffect,useState} from 'react';
 import {Link,useParams,useSearchParams} from 'react-router-dom';
 import {useAuth} from '../context/AuthContext';
 import './public-catalogue.css';
+import {SidebarShell, SidebarMenuButton} from '../components/SidebarShell';
 import workshopPhoto from '../assets/pattern-workshop.jpg';
 import woodenPatternPhoto from '../assets/wood-pattern.jpg';
 import metalPatternPhoto from '../assets/metal-pattern.jpg';
@@ -9,15 +10,15 @@ import machinePatternPhoto from '../assets/machine-pattern.jpg';
 const API=import.meta.env.VITE_API_BASE_URL||'/api';
 function Layout({children}) {
   const {user}=useAuth();
-  return <div className="kpc-public">
+  return <SidebarShell title="Explore KPC" items={[{to:'/',label:'Home'},{to:'/catalogue',label:'Pattern Catalogue'},{to:'/catalogue?q=wood',label:'Wooden Patterns'},{to:'/catalogue?q=metal',label:'Metallic Patterns'},...(user ? [{to:`/${user.role}`,label:'My Workspace'}] : [{to:'/login',label:'Sign In'},{to:'/register',label:'Register Business'}])]}><div className="kpc-public">
     <div className="kpc-topline"><div className="container">PATTERN MAKING, WITH PURPOSE.<span>Ahmedabad, Gujarat · B2B manufacturing</span></div></div>
     <header className="kpc-header"><nav aria-label="Public navigation" className="container kpc-nav">
-      <Link to="/" className="kpc-logo"><b>KPC<span> /</span></b><small>KHODEL<br/>PATTERN CRAFT</small></Link>
+      <div className="kpc-logo-menu"><Link to="/" className="kpc-logo"><b>KPC<span> /</span></b><small>KHODEL<br/>PATTERN CRAFT</small></Link><SidebarMenuButton /></div>
       <div className="kpc-nav-links"><Link to="/">Home</Link><Link to="/catalogue">Our catalogue</Link><Link className="btn kpc-outline" to={user?`/${user.role}`:'/login'}>{user?'My workspace ↗':'Portal sign in ↗'}</Link></div>
     </nav></header>
     <main className="container kpc-main">{children}</main>
     <footer className="kpc-footer"><div className="container"><div className="kpc-footer-inner"><div><p className="kpc-kicker">LET’S BUILD SOMETHING PRECISE</p><h2>Your next pattern starts here.</h2></div><Link className="btn kpc-orange" to="/catalogue">Explore the catalogue ↗</Link></div><div className="kpc-footer-bottom"><strong>KHODEL PATTERN CRAFT</strong><span>Industrial pattern manufacturing · Ahmedabad, Gujarat</span><Link to={user?`/${user.role}`:'/register'}>{user?'My workspace':'Register your business'} →</Link></div></div></footer>
-  </div>;
+  </div></SidebarShell>;
 }
 export function PublicHome(){return <Layout>
   <section className="kpc-hero"><div className="kpc-hero-copy"><p className="kpc-kicker"><span className="kpc-dot"/> FROM DESIGN INTENT TO MANUFACTURING</p><h1>Precision patterns.<br/><em>Practical solutions.</em></h1><p className="kpc-intro">Wooden and metallic patterns for your next manufacturing project. Explore our catalogue and share your requirements for a tailored quotation.</p><div className="kpc-actions"><Link className="btn kpc-orange" to="/catalogue">Explore our patterns <span>↗</span></Link><Link className="kpc-text-link" to="/register">Register your business →</Link></div><div className="kpc-hero-note"><span>01 / EXPLORE</span><span>02 / SHARE REQUIREMENTS</span><span>03 / REQUEST A QUOTE</span></div></div>

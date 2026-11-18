@@ -1,8 +1,9 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SidebarShell, SidebarMenuButton } from './SidebarShell';
 import { useAuth } from '../context/AuthContext';
 
-export function PortalLayout({ title, subtitle, roleBadgeColor = 'primary', children }) {
+export function PortalLayout({ title, subtitle, roleBadgeColor = 'primary', sidebarItems, activeSection, onSectionChange, children }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -11,15 +12,18 @@ export function PortalLayout({ title, subtitle, roleBadgeColor = 'primary', chil
     navigate('/login');
   }
 
-  return (
+  const content = (
     <div className="d-flex flex-column min-vh-100 bg-light">
       {/* Top Navbar */}
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark px-3 px-lg-4 shadow-sm border-bottom border-secondary">
         <div className="container-fluid">
+          <div className="kpc-logo-menu">
           <Link className="navbar-brand d-flex align-items-center gap-2" to="/">
             <span className="fw-bold tracking-tight text-white fs-4">KPC</span>
             <span className="badge bg-warning text-dark text-uppercase small">Industrial</span>
           </Link>
+          <SidebarMenuButton />
+          </div>
 
           <div className="d-flex align-items-center gap-3">
             <span className="text-light small d-none d-md-inline">
@@ -65,4 +69,5 @@ export function PortalLayout({ title, subtitle, roleBadgeColor = 'primary', chil
       </footer>
     </div>
   );
+  return sidebarItems ? <SidebarShell title={user?.role === 'admin' ? 'Administration' : 'Customer workspace'} items={sidebarItems} activeSection={activeSection} onSectionChange={onSectionChange}>{content}</SidebarShell> : content;
 }
