@@ -1,9 +1,12 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
+    UniqueConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -354,3 +357,55 @@ class ProductImage(Base):
     @property
     def url(self) -> str:
         return f'/api/products/images/{self.id}'
+
+
+class Quotation(Base):
+    __tablename__ = 'quotations'
+    __table_args__ = (
+        UniqueConstraint('rfq_id', 'version', name='uq_quotation_rfq_version'),
+        CheckConstraint("status IN ('draft','sent','accepted','superseded','expired','rejected')", name='ck_quotation_status'),
+        CheckConstraint("pricing_source = 'manual' AND estimation_id IS NULL", name='ck_quotation_manual_source'),
+        CheckConstraint('version > 0 AND revision > 0', name='ck_quotation_versions'),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rfq_id: Mapped[int] = mapped_column(ForeignKey('rfqs.id'), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(20), default='draft')
+    pricing_source: Mapped[str] = mapped_column(String(20), default='manual')
+    estimation_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    tax_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(20, 2))
+    tax_amount: Mapped[Decimal] = mapped_column(Numeric(20, 2))
+    total: Mapped[Decimal] = mapped_column(Numeric(20, 2))
+    lead_time_days: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    valid_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[str] = mapped_column(Text, default='')
+    created_by: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    items: Mapped[list['QuotationItem']] = relationship(cascade='all, delete-orphan', order_by='QuotationItem.position')
+    decisions: Mapped[list['QuotationDecision']] = relationship(cascade='all, delete-orphan', order_by='QuotationDecision.id')
+
+
+class QuotationItem(Base):
+    __tablename__ = 'quotation_items'
+    __table_args__ = (CheckConstraint('quantity > 0 AND unit_price >= 0', name='ck_quotation_item_values'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    quotation_id: Mapped[int] = mapped_column(ForeignKey('quotations.id', ondelete='CASCADE'), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str] = mapped_column(String(500))
+    quantity: Mapped[int] = mapped_column(Integer)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(11, 2))
+    amount: Mapped[Decimal] = mapped_column(Numeric(20, 2))
+
+
+class QuotationDecision(Base):
+    __tablename__ = 'quotation_decisions'
+    __table_args__ = (CheckConstraint("action IN ('reject','request_changes')", name='ck_quotation_decision_action'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    quotation_id: Mapped[int] = mapped_column(ForeignKey('quotations.id', ondelete='CASCADE'), index=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    action: Mapped[str] = mapped_column(String(30))
+    message: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

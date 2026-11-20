@@ -262,7 +262,7 @@ Creating this document passes none of these gates. Current results are **26 V ca
 
 ## 12. Verification obligations for remaining slices
 
-Before each slice is implemented, expand its contract using the same fixture/action/expected-state/evidence structure. Reference the existing PRP AC IDs instead of redefining their requirements. All rows below are **CONTRACT NOT EXPANDED / NOT RUN** in this version.
+Before each slice is implemented, expand its contract using the same fixture/action/expected-state/evidence structure. Reference the existing PRP AC IDs instead of redefining their requirements. Rows below remain **CONTRACT NOT EXPANDED / NOT RUN** unless a linked slice evidence record explicitly states otherwise. S07 preparation/review has a bounded [contract and local evidence](S07_VERIFICATION.md); hosted verification and S08 acceptance remain separate.
 
 | Slice | Required focus before closure | Existing acceptance source |
 | --- | --- | --- |
@@ -271,7 +271,7 @@ Before each slice is implemented, expand its contract using the same fixture/act
 | S04 | Admin product/image writes, valid/mismatched/oversize images, object/metadata cleanup, deactivation/history | PRP-002 AC-02-04/05/06 |
 | S05 | Existing/custom RFQ without files, required inputs, review/edit preservation, owner/Admin visibility | PRP-003 AC-03-01/02/03/08 |
 | S06 | Two-file total and 20 MB boundaries, concurrent uploads, content checks, private preview/download, restart persistence, profile images | PRP-003 AC-03-04/05/06/07; REQ-03 image portion |
-| S07 | Quote version ordering, newer draft superseding old, manual provenance, send/reject/change-request behavior | PRP-005 AC-05-01 through AC-05-05; manual part of PRP-004 |
+| S07 | [Expanded contract and local evidence](S07_VERIFICATION.md): version ordering, immediate superseding, manual provenance, send/reject/change-request behavior | PRP-005 AC-05-01 through AC-05-05; manual part of PRP-004 |
 | S08 | Acceptance-time validity, race/rollback/idempotency, immutable commercial snapshots, one order/invoice, unpaid cancellation | PRP-005 AC-05-02/04/06/07/08; PRP-006 AC-06-01/06/07 |
 | S09 | Partial/failed/full payment, duplicate key/content mismatch, concurrent overpayment, cancellation race | PRP-006 AC-06-03 through AC-06-08 |
 | S10 | Paid assignment, one-job uniqueness, assigned file access, progress limits/history/pause, truthful tracking | PRP-007 AC-07-01 through AC-07-05; PRP-006 AC-06-02 |

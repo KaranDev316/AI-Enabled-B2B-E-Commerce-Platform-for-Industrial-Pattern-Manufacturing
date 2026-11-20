@@ -1,3 +1,4 @@
+import { QuotationWorkspace } from '../components/QuotationWorkspace';
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +12,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function CustomerPortal() {
   const { user, csrfToken } = useAuth();
+  const [quotationRfq, setQuotationRfq] = useState(null);
   const [profile, setProfile] = useState(user?.customer_profile || {});
   const [activeTab, setActiveTab] = useState(['dashboard', 'rfqs', 'orders', 'invoices', 'support', 'profile'].includes(new URLSearchParams(window.location.search).get('tab')) ? new URLSearchParams(window.location.search).get('tab') : 'dashboard');
 
@@ -106,6 +108,7 @@ export function CustomerPortal() {
   }, []);
 
   function navigateTab(tab) {
+    setQuotationRfq(null);
     setActiveTab(tab);
     window.scrollTo(0, 0);
     setIsRfqModalOpen(false);
@@ -120,6 +123,7 @@ export function CustomerPortal() {
   }
 
   function startRfq() {
+    setQuotationRfq(null);
     setRfqStep(1);
     setIsRfqModalOpen(true);
   }
@@ -614,7 +618,8 @@ export function CustomerPortal() {
       {!isRfqModalOpen && ['orders','invoices'].includes(activeTab) && <CustomerUnavailable type={activeTab} onNewRfq={startRfq} onSupport={() => navigateTab('support')} />}
 
       {/* TAB 1: RFQ WORKSPACE (SLICE S05) */}
-      {!isRfqModalOpen && activeTab === 'rfqs' && (
+      {quotationRfq && !isRfqModalOpen && activeTab === 'rfqs' && <QuotationWorkspace rfq={quotationRfq} csrfToken={csrfToken} onBack={() => setQuotationRfq(null)} />}
+      {!quotationRfq && !isRfqModalOpen && activeTab === 'rfqs' && (
         <div>
           <div className="card shadow-sm border-0 rounded-3 mb-4">
             <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
@@ -1518,6 +1523,7 @@ export function CustomerPortal() {
               </div>
 
               <div className="modal-footer border-0">
+                <button className="btn btn-primary" onClick={() => { navigateTab('rfqs'); setQuotationRfq(selectedRfqDetail); }}>Review quotations</button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"

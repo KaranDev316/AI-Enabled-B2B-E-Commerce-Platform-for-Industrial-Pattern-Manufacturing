@@ -1,3 +1,4 @@
+import { QuotationWorkspace } from '../components/QuotationWorkspace';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AdminLayout, adminPages } from '../components/AdminLayout';
@@ -9,9 +10,11 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function AdminPortal() {
   const { user, csrfToken } = useAuth();
+  const [quotationRfq, setQuotationRfq] = useState(null);
   const [activeTab, setActiveTab] = useState(() => { const tab = new URLSearchParams(window.location.search).get('tab'); return adminPages.some(page => page.id === tab) ? tab : 'dashboard'; });
   const [dashboardSearch, setDashboardSearch] = useState('');
   function navigateTab(tab) {
+    setQuotationRfq(null);
     setActiveTab(tab);
     setFeedback({ error: '', success: '' });
     const url = new URL(window.location.href);
@@ -397,7 +400,8 @@ export function AdminPortal() {
       {activeTab === 'catalogue' && <AdminCatalogue />}
 
       {/* TAB 1: RFQ REVIEW QUEUE (SLICE S05) */}
-      {activeTab === 'rfqs' && (
+      {quotationRfq && activeTab === 'rfqs' && <QuotationWorkspace rfq={quotationRfq} admin csrfToken={csrfToken} onBack={() => setQuotationRfq(null)} onIssued={fetchRfqs} />}
+      {!quotationRfq && activeTab === 'rfqs' && (
         <div className="card shadow-sm border-0 rounded-3 mb-4">
           <div className="card-header bg-white border-bottom py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
@@ -1054,6 +1058,7 @@ export function AdminPortal() {
               </div>
 
               <div className="modal-footer border-0">
+                <button className="btn btn-primary" onClick={() => { setQuotationRfq(selectedRfqModal); setSelectedRfqModal(null); }}>Create / review quotation</button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
