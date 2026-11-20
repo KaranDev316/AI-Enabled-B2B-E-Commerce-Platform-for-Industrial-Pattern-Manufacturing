@@ -259,7 +259,7 @@ class Order(Base):
     rfq_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey('rfqs.id', ondelete='SET NULL'), nullable=True
     )
-    total_amount: Mapped[float] = mapped_column(Numeric(12, 2), default=0.0, nullable=False)
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(20, 2), default=0.0, nullable=False)
     status: Mapped[str] = mapped_column(String(50), default='pending_payment', nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(

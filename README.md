@@ -4,7 +4,7 @@ Final-year BCA project for a single industrial pattern manufacturer.
 
 ## Current state
 
-Project foundation: React/Vite/Bootstrap frontend, FastAPI API, SQLAlchemy/Alembic configuration, and initial CI checks. The development page calls the API health endpoint. Authentication, database tables/migrations, and business features are not implemented yet. A successful health response proves API liveness only.
+React/Vite/Bootstrap frontend, FastAPI API and SQLAlchemy/Alembic persistence. Feature implementation and verification are tracked in the slice plans and verification records under `docs/`. A successful health response proves API liveness only.
 
 ## Requirements
 
@@ -32,7 +32,8 @@ python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 cp .env.example .env
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+# Configure DATABASE_URL in .env before starting.
+python start.py --reload --host 127.0.0.1 --port 8001
 ```
 
 On Windows, use `py -3.12 -m venv .venv` and `.venv\Scripts\Activate.ps1` in PowerShell instead of the Unix environment commands.
@@ -80,7 +81,7 @@ cd frontend
 npm run build
 ```
 
-The backend will serve `frontend/dist` on port 8000 when that build exists. Restart the backend after the first frontend build, then visit **http://127.0.0.1:8000** to check the single-origin built application. Vite remains the development server for normal frontend editing. `npm run preview` previews frontend assets only and is not a substitute for the API proxy or backend-served build.
+The backend will serve `frontend/dist` on port 8001 when that build exists. Restart the backend after the first frontend build, then visit **http://127.0.0.1:8001** to check the single-origin built application. Vite remains the development server for normal frontend editing. `npm run preview` previews frontend assets only and is not a substitute for the API proxy or backend-served build.
 
 GitHub Actions runs the backend checks with PostgreSQL and the frontend build on main pushes and pull requests. Local checks do not prove that remote CI has passed.
 
@@ -104,7 +105,7 @@ Suggested ownership: team lead handles frontend/integration; developer 2 owns ba
 
 ## Immediate next work
 
-Complete native setup on each developer's computer, verify CI and PostgreSQL connectivity, and prepare the bounded S01 implementation prompts. Then implement secure sessions/login against the S01 verification contract. No authentication endpoint currently exists, so no S01 authentication check has passed.
+Use the vertical slice plan and verification records to select the next bounded task. Follow the automatic deployment section below when publishing reviewed changes.
 
 ## Reference documentation
 
@@ -112,3 +113,16 @@ Complete native setup on each developer's computer, verify CI and PostgreSQL con
 - [Vite development server/proxy](https://vite.dev/config/server-options)
 - [FastAPI first steps](https://fastapi.tiangolo.com/tutorial/first-steps/)
 - [Alembic tutorial](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+
+
+## Automatic deployment and database upgrades
+
+The backend startup entry point is `cd backend` then `python start.py`. It applies pending Alembic migrations before serving requests. Applied revisions are not rerun. Failed migrations stop startup; cooperating PostgreSQL startups serialize their migration checks. `--migrate-only` checks/upgrades without starting the API. Local development can use `python start.py --reload`; newly added migration files require restarting this entry point once, while ordinary Python edits reload automatically.
+
+Render's existing service must use **Root Directory** `backend`, **Build Command** `pip install -r requirements.txt`, **Start Command** `python start.py --host 0.0.0.0`, and **Auto-Deploy** **After CI Checks Pass** on `main`. Set the start command after `backend/start.py` has been pushed. Keep the existing private DATABASE_URL and other environment values. This is a one-time service setting; a repository file does not change an existing Render service's dashboard settings by itself.
+
+Vercel keeps Root Directory `frontend`. `frontend/vercel.json` declares the build command and output directory and preserves the existing `/api` proxy. The Git-connected production branch should remain `main`.
+
+Normal release flow: commit/push the reviewed changes → GitHub Actions tests/builds → Render builds, upgrades pending migrations, and starts the new backend → Vercel builds/deploys the frontend from the same pushed commit. The two providers deploy independently, so frontend/backend changes should tolerate a short version overlap. There is no need to run Alembic manually after each release. A new schema change still needs a reviewed migration file; this does not generate migrations or automatically commit developers' work.
+
+See [deployment setup and checks](docs/DEPLOYMENT.md).

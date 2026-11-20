@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_admin, require_customer, verify_csrf_token, verify_trusted_origin
+from app.models_commercial import CommercialInvoice, OrderCommercialSnapshot
+from app.services.commercial_service import create_order_and_invoice_atomic
 from app.models import Quotation, QuotationDecision, QuotationItem, RFQ, User
 from app.schemas.quotation import QuoteCreateInput, QuoteUpdateInput, QuoteSendInput, QuoteDecisionInput, QuoteItemInput
 
@@ -173,3 +175,37 @@ def decide_quote(quote_id: int, data: QuoteDecisionInput, user: User = Depends(r
         quote.status = 'rejected'
     db.commit()
     return output(quote, latest)
+
+
+@router.post('/quotations/{quote_id}/accept', dependencies=write_checks)
+def accept_quote(quote_id: int, user: User = Depends(require_customer), db: Session = Depends(get_db)):
+    quote, latest = quote_for_update(db, quote_id, user)
+    if quote.status == 'accepted':
+        snapshot = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.quotation_id == quote.id))
+        invoice = db.scalar(select(CommercialInvoice).where(CommercialInvoice.order_id == snapshot.order_id)) if snapshot else None
+        if not snapshot or not invoice:
+            raise HTTPException(409, 'The accepted quotation has incomplete commercial records. Contact KPC.')
+        return {'quotation_id': quote.id, 'order_id': snapshot.order_id, 'invoice_id': invoice.id}
+    if quote.id != latest.id or quote.status != 'sent' or expired(quote):
+        raise HTTPException(409, 'Only the latest unexpired issued quotation can be accepted. Reload the offer.')
+    if not quote.items or quote.total <= 0 or not quote.lead_time_days:
+        raise HTTPException(409, 'This quotation is incomplete and cannot be accepted.')
+    profile = user.customer_profile
+    if not profile:
+        raise HTTPException(409, 'Complete your business profile before accepting the quotation.')
+    rfq = db.get(RFQ, quote.rfq_id)
+    try:
+        quote.status = 'accepted'
+        order, snapshot, invoice = create_order_and_invoice_atomic(
+            db, customer_id=user.id, customer_name=profile.company_name,
+            customer_gstin=profile.gstin, customer_address=profile.address,
+            product_summary=rfq.title, items=[], rfq_id=rfq.id,
+            quotation_id=quote.id, quotation_version=quote.version,
+            estimated_lead_time_days=quote.lead_time_days, actor_user_id=user.id,
+            accepted_quote=quote, requested_quantity=rfq.quantity,
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return {'quotation_id': quote.id, 'order_id': order.id, 'invoice_id': invoice.id}

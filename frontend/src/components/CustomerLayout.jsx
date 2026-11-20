@@ -26,7 +26,7 @@ export function CustomerIcon({ name, size = 21, ...props }) {
 
 export const customerPages = [
   { id: 'dashboard', title: 'Dashboard', icon: 'dashboard', description: 'Your requirements, conversations, and next steps in one place.' },
-  { id: 'orders', title: 'My Orders', icon: 'orders', description: 'Follow your manufacturing orders from confirmation to delivery.' },
+  { id: 'orders', title: 'My Orders', icon: 'orders', description: 'Review accepted orders, payment status, and cancellation history.' },
   { id: 'rfqs', title: 'Requests for Quotation', icon: 'rfqs', description: 'Share your requirements and keep track of every submitted request.' },
   { id: 'invoices', title: 'Invoices & Payments', icon: 'invoices', description: 'Your invoices and payment information, together.' },
   { id: 'support', title: 'Support & Complaints', icon: 'support', description: 'Get help with your requirements and continue your conversations with KPC.' },

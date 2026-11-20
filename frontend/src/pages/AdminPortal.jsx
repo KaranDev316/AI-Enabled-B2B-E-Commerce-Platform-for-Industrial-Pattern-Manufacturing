@@ -1,3 +1,5 @@
+import AdminOrdersPanel from '../components/commercial/AdminOrdersPanel';
+import AdminInvoicesPanel from '../components/commercial/AdminInvoicesPanel';
 import { QuotationWorkspace } from '../components/QuotationWorkspace';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -395,8 +397,10 @@ export function AdminPortal() {
       )}
 
       {activeTab === 'dashboard' && <AdminDashboard search={dashboardSearch} onNavigate={navigateTab} onOpenRfq={rfq => { navigateTab('rfqs'); setSelectedRfqModal(rfq); }} onOpenTicket={id => { navigateTab('support'); handleOpenAdminTicket(id); }} />}
-      {['orders', 'inventory', 'invoices', 'reports'].includes(activeTab) && <AdminUnavailable title={adminPages.find(page => page.id === activeTab)?.title} onSupport={() => navigateTab('support')} />}
+      {['inventory', 'reports'].includes(activeTab) && <AdminUnavailable title={adminPages.find(page => page.id === activeTab)?.title} onSupport={() => navigateTab('support')} />}
 
+      {activeTab === 'orders' && <AdminOrdersPanel />}
+      {activeTab === 'invoices' && <AdminInvoicesPanel />}
       {activeTab === 'catalogue' && <AdminCatalogue />}
 
       {/* TAB 1: RFQ REVIEW QUEUE (SLICE S05) */}

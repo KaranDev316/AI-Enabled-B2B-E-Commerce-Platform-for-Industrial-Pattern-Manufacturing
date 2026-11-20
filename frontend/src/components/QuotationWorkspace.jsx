@@ -19,7 +19,7 @@ function payload(form) {
     items: form.items.map(item => ({ ...item, quantity: Number(item.quantity) })) };
 }
 
-export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIssued }) {
+export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIssued, onAccepted }) {
   const [quotes, setQuotes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,6 +28,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState(blank);
   const [dirty, setDirty] = useState(false);
+  const [acceptedOrder, setAcceptedOrder] = useState(null);
   const [decision, setDecision] = useState('');
   const [message, setMessage] = useState('');
   const heading = useRef(null);
@@ -62,6 +63,15 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
       const saved = await request(path, { method, body: JSON.stringify(body) });
       await load(saved.id); setSuccess(notice); setDecision(''); setMessage('');
       if (saved.status === 'sent') onIssued?.();
+    } catch (err) { setError(err.message); }
+    finally { setBusy(false); }
+  }
+  async function accept() {
+    setBusy(true); setError(''); setSuccess('');
+    try {
+      const result = await request(`/quotations/${quote.id}/accept`, { method: 'POST' });
+      setAcceptedOrder(result); await load(quote.id);
+      setSuccess('Quotation accepted. Your order and demo invoice are ready, awaiting payment.');
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -107,9 +117,10 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
           </section>
           {!editable && quote.notes && <section className="card p-3"><h3>Commercial notes</h3><p className="quotation-message">{quote.notes}</p></section>}
           <div className="quotation-actions">
-            {admin ? <>{editable ? <><button className="btn btn-primary" disabled={busy || dirty || !quote.items.length || !quote.lead_time_days || Number(quote.total) <= 0} onClick={() => mutate(`/admin/quotations/${quote.id}/send`, { expected_revision: quote.revision }, 'POST', 'Quotation issued to the customer portal.')}>Issue quotation</button><span>Save and review the draft before issuing.</span></> : latest?.status !== 'accepted' && <button className="btn btn-primary" disabled={busy || !quote.is_latest} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { ...payload(editValues(latest)), expected_version: latest.version }, 'POST', 'New draft created. The previous version is now superseded.')}>Create revised draft</button>}</> : <><button className="btn btn-outline-danger" disabled={busy || !quote.can_respond} onClick={() => setDecision('reject')}>Reject quotation</button><button className="btn btn-outline-primary" disabled={busy || !quote.can_respond} onClick={() => setDecision('request_changes')}>Request changes</button><button className="btn btn-primary" disabled title="Order placement is not available yet">Accept & place order</button></>}
+            {admin ? <>{editable ? <><button className="btn btn-primary" disabled={busy || dirty || !quote.items.length || !quote.lead_time_days || Number(quote.total) <= 0} onClick={() => mutate(`/admin/quotations/${quote.id}/send`, { expected_revision: quote.revision }, 'POST', 'Quotation issued to the customer portal.')}>Issue quotation</button><span>Save and review the draft before issuing.</span></> : latest?.status !== 'accepted' && <button className="btn btn-primary" disabled={busy || !quote.is_latest} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { ...payload(editValues(latest)), expected_version: latest.version }, 'POST', 'New draft created. The previous version is now superseded.')}>Create revised draft</button>}</> : <><button className="btn btn-outline-danger" disabled={busy || !quote.can_respond} onClick={() => setDecision('reject')}>Reject quotation</button><button className="btn btn-outline-primary" disabled={busy || !quote.can_respond} onClick={() => setDecision('request_changes')}>Request changes</button><button className="btn btn-primary" disabled={busy || (!quote.can_respond && quote.status !== 'accepted')} onClick={accept}>{quote.status === 'accepted' ? 'Retrieve order & invoice' : 'Accept & place order'}</button></>}
           </div>
-          {!admin && <p className="quotation-caption">{quote.can_respond ? 'You can reject this offer or send a requested revision to KPC. Order placement is not available yet.' : 'This version is no longer available for a decision. KPC may be preparing a revised offer.'}</p>}
+          {!admin && <p className="quotation-caption">{quote.can_respond ? 'Accept this offer to create an awaiting-payment order, or reject it or request changes.' : quote.status === 'accepted' ? 'This quotation has been accepted. Retrieve its existing order and invoice below.' : 'This version is no longer available for a decision. KPC may be preparing a revised offer.'}</p>}
+          {acceptedOrder && <div className="quotation-actions"><button className="btn btn-primary" onClick={() => onAccepted?.(acceptedOrder)}>View my orders</button><a className="btn btn-outline-primary" href={`${API}/invoices/${acceptedOrder.invoice_id}/download`}>Download demo invoice</a></div>}
           {decision && <form className="card p-3" onSubmit={e => { e.preventDefault(); mutate(`/quotations/${quote.id}/decisions`, { action: decision, message }, 'POST', decision === 'reject' ? 'Quotation rejected. KPC can review your response.' : 'Change request saved for KPC review. Official prices are unchanged.'); }}><h3>{decision === 'reject' ? 'Reject quotation' : 'Request changes'}</h3><label htmlFor="quote-response">{decision === 'reject' ? 'Reason for rejection' : 'What would you like changed?'}</label><textarea id="quote-response" className="form-control mb-3" required maxLength={4000} value={message} onChange={e => setMessage(e.target.value)} disabled={busy}/><div className="d-flex gap-2"><button className="btn btn-primary" disabled={busy || !message.trim()}>Submit response</button><button type="button" className="btn btn-outline-primary" disabled={busy} onClick={() => setDecision('')}>Cancel</button></div></form>}
           {!!quote.decisions.length && <section className="card p-3"><h3>Customer responses</h3>{quote.decisions.map(d => <article className="quotation-response" key={d.id}><strong>{d.action === 'reject' ? 'Rejected' : 'Change requested'}</strong><small>{date(d.created_at)}</small><p className="quotation-message">{d.message}</p></article>)}</section>}
         </div>

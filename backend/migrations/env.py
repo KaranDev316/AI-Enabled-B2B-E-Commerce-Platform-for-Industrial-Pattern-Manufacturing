@@ -11,6 +11,7 @@ if str(backend_dir) not in sys.path:
 from app.config import get_settings
 from app.database import Base
 import app.models  # Registers models on Base.metadata
+import app.models_commercial
 
 target_metadata = Base.metadata
 url = get_settings().database_url
