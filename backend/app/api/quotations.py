@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import require_admin, require_customer, verify_csrf_token, verify_trusted_origin
 from app.models import Quotation, QuotationDecision, QuotationItem, RFQ, User
-from app.schemas.quotation import QuoteCreateInput, QuoteUpdateInput, QuoteSendInput, QuoteDecisionInput
+from app.schemas.quotation import QuoteCreateInput, QuoteUpdateInput, QuoteSendInput, QuoteDecisionInput, QuoteItemInput
 
 router = APIRouter(prefix='/api', tags=['Quotations'])
 write_checks = [Depends(verify_trusted_origin), Depends(verify_csrf_token)]
@@ -116,6 +116,15 @@ def create_draft(rfq_id: int, data: QuoteCreateInput, user: User = Depends(requi
         raise HTTPException(409, 'A newer version exists. Reload before revising.')
     if rfq.status in ('closed', 'rejected'):
         raise HTTPException(409, 'This RFQ is closed or rejected')
+    if data.from_rfq:
+        if quotes or data.items:
+            raise HTTPException(422, 'Use the submitted requirement only for a first draft without supplied line items.')
+        if rfq.quantity > 100000:
+            raise HTTPException(422, 'The requested quantity exceeds the quotation line limit of 100000. Prepare separate line items manually.')
+        # Use the persisted RFQ, never a client-supplied title, quantity or catalogue price.
+        data = data.model_copy(update={'items': [QuoteItemInput(
+            description=rfq.title, quantity=rfq.quantity, unit_price=Decimal('0.00')
+        )]})
     if quotes:
         quotes[0].status = 'superseded'
     quote = Quotation(rfq_id=rfq_id, version=latest_version + 1, revision=1, created_by=user.id,

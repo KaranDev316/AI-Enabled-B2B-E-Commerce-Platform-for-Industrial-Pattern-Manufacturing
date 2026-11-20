@@ -21,6 +21,7 @@ class QuoteDraftInput(BaseModel):
 
 
 class QuoteCreateInput(QuoteDraftInput):
+    from_rfq: bool = False
     # Optimistic check supplements the RFQ row lock, including first-version races.
     expected_version: int = Field(ge=0)
 

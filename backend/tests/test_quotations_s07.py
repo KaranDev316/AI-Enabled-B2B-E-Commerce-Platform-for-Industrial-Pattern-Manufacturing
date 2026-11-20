@@ -141,3 +141,48 @@ def test_untrusted_origin_and_manual_provenance_cannot_be_overridden(client, rfq
     assert client.post(endpoint, json={'expected_version': 0}, headers={**admin, 'Origin': 'https://untrusted.example'}).status_code == 403
     for supplied in ({'pricing_source': 'ai'}, {'estimation_id': 123}, {'total': '0.01'}):
         assert client.post(endpoint, json={'expected_version': 0, **supplied}, headers=admin).status_code == 422
+
+
+def test_customer_submission_becomes_linked_quote_after_admin_review(client, test_users, db_session):
+    customer = login(client, 'customer')
+    submitted = client.post('/api/rfqs', json={
+        'title': 'Customer engine core box', 'rfq_type': 'custom', 'material': 'Mahogany Wood',
+        'quantity': 7, 'dimensions': '200 x 100 mm', 'specifications': 'Draft angle 2 degrees',
+        'notes': 'Review drawing before manufacture',
+    }, headers=customer)
+    assert submitted.status_code == 201, submitted.text
+    rfq_id = submitted.json()['id']
+    admin = login(client)
+    reviewed = client.patch(f'/api/admin/rfqs/{rfq_id}/status', json={'status': 'under_review'}, headers=admin)
+    assert reviewed.status_code == 200, reviewed.text
+    response = client.post(f'/api/admin/rfqs/{rfq_id}/quotations', json={'expected_version': 0, 'from_rfq': True}, headers=admin)
+    assert response.status_code == 201, response.text
+    quote = response.json()
+    assert quote['rfq_id'] == rfq_id
+    assert quote['items'] == [{'description': 'Customer engine core box', 'quantity': 7, 'unit_price': '0.00', 'amount': '0.00'}]
+    assert quote['lead_time_days'] is None and Decimal(quote['total']) == 0
+    assert db_session.query(RFQ).count() == 1  # No duplicate request.
+    source = db_session.get(RFQ, rfq_id)
+    assert (source.material, source.quantity, source.specifications) == ('Mahogany Wood', 7, 'Draft angle 2 degrees')
+    assert client.post(f"/api/admin/quotations/{quote['id']}/send", json={'expected_revision': quote['revision']}, headers=admin).status_code == 422
+    saved = client.put(f"/api/admin/quotations/{quote['id']}", json={
+        'expected_revision': quote['revision'], 'items': [{'description': quote['items'][0]['description'], 'quantity': 7, 'unit_price': '100.00'}],
+        'lead_time_days': 10,
+    }, headers=admin)
+    assert saved.status_code == 200, saved.text
+    issued = send(client, saved.json(), admin)
+    assert Decimal(issued['total']) == Decimal('700.00')
+    login(client, 'customer')
+    offers = client.get(f'/api/rfqs/{rfq_id}/quotations').json()
+    assert offers[0]['id'] == quote['id'] and offers[0]['items'][0]['quantity'] == 7
+
+
+def test_blank_creation_and_revision_remain_explicit(client, rfq):
+    admin = login(client)
+    first = draft(client, rfq, admin, items=[])
+    assert first['items'] == []
+    mixed = client.post(f'/api/admin/rfqs/{rfq.id}/quotations', json={'expected_version': 1, 'from_rfq': True}, headers=admin)
+    assert mixed.status_code == 422
+    revised = draft(client, rfq, admin, version=1)
+    assert revised['items'][0]['description'] == 'Tooling'
+    assert revised['rfq_id'] == rfq.id

@@ -38,3 +38,13 @@ References inspected: `docs/ui-ux/admin/rfqs-and-quotations.webp`, `docs/ui-ux/c
 5. Admin opens that RFQ again, sees responses in version history, and creates a revised draft. The prior offer is superseded immediately; save and issue the new version.
 
 Rerun focused tests with `backend/.venv/bin/python -m pytest backend/tests/test_quotations_s07.py -q`. To run real races, set `S07_POSTGRES_TEST_URL` to a dedicated localhost PostgreSQL database ending in `_test`, then run `backend/tests/test_quotations_s07_postgres.py`. It creates/drops only uniquely named disposable schemas. Do not point these tests at the shared application database.
+
+## Reopened S07 follow-up — quotation from a submitted RFQ (2026-11-20)
+
+The original flow correctly linked quotations to RFQs but always opened an empty draft, hiding the requirement context. Admin now has explicit **Create quotation from this RFQ** and **Create blank quotation** choices. RFQ-based creation reads the persisted source title/quantity on the server, starts one unpriced line, and preserves the original RFQ ID. Admin still enters official prices and lead time; catalogue prices and customer notes are not automatically treated as commercial terms.
+
+The editor shows the source material, quantity, dimensions, specifications, description, target date, notes and drawing links using the Admin reference's requirement/detail styling. Existing empty drafts offer **Use submitted requirement**, then save into the same draft/version. Populated drafts and revisions are not overwritten. No schema migration is needed.
+
+Regression evidence: **14 focused S07 API tests passed**, including Customer submission → Admin login → review → RFQ-based draft → manual pricing → issue → owning Customer review. The test verifies one RFQ remains and original requirements are unchanged. Explicit blank creation and revision behavior still pass. The production frontend build passed.
+
+Native Safari checks used disposable SQLite fixtures on localhost 5191: new RFQ-based creation populated the source title and quantity 7; an existing blank draft populated title and quantity 3 through **Use submitted requirement**, then saved into the same QT-1 v1. Desktop and narrow-window layouts were inspected against the Admin RFQs/quotations and global UI references. Requirement context sits beside pricing on desktop and follows the established stacked layout at narrow widths. No Supabase business records were altered during verification. Phone-size and hosted verification remain pending for this follow-up.
