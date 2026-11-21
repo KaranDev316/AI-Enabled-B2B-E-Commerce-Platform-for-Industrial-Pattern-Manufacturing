@@ -10,7 +10,7 @@ Successful installments reduce the balance. Failed attempts remain in history wi
 
 Payments and cancellation lock the same parent order before reading authoritative settlement. The successful payment ledger is summed and checked against cached invoice/snapshot balances before recording another attempt. An unexplained pre-existing settlement mismatch is rejected for review rather than silently changed. A database unique constraint protects each global payment key. Matching retries return the original attempt even after final settlement/cancellation; changed invoice, amount or outcome with the same key conflicts. Failed database work rolls back the ledger, balances and confirmation together.
 
-Invoice detail and downloadable HTML include persisted successful/failed history and current settlement. Accepted items, tax and totals remain unchanged. Customer/Admin lists and open details refresh through existing sync/polling behavior. The four commercial panels' pre-existing hook initialization order was corrected so they render without accessing callbacks before initialization.
+Invoice detail and downloadable PDF include persisted successful/failed history and current settlement. Accepted items, tax and totals remain unchanged. Customer/Admin lists and open details refresh through existing sync/polling behavior. The four commercial panels' pre-existing hook initialization order was corrected so they render without accessing callbacks before initialization.
 
 The payment form saves its key and exact details in tab storage before submission. A network error, unreadable response or uncertain server failure retains that attempt and offers an explicit same-key retry, including after reload. Inputs stay locked for an unresolved attempt. A known successful/failed result clears the pending operation; an explicit business rejection allows correction. Login does not automatically replay a payment.
 
@@ -45,9 +45,19 @@ Inspected `docs/ui-ux/customer/invoices-and-payments.webp`, `admin/invoices-and-
 ## Activation and manual verification
 
 1. With authorization for the target database, run `cd backend` then `.venv/bin/python start.py`. The existing startup process applies pending revisions, including **008**, before serving on port **8001**. Render must use the same startup path when this commit is deployed.
-2. Use an accepted S08 quotation's unpaid invoice. Customer → Invoices → Demo Payment opens the existing invoice detail modal. Record an explicit failed demo attempt; confirm history appears and balance stays unchanged.
+2. Use an accepted S08 quotation's unpaid invoice. Customer → Invoices → Payment opens the existing invoice detail modal. Record an explicit failed demo attempt; confirm history appears and balance stays unchanged.
 3. Record a successful partial installment. Customer/Admin must see the same paid/remaining amounts; cancellation and production assignment remain unavailable.
 4. Settle the remaining amount. Confirm one order confirmation, paid invoice, zero balance and Admin assignment eligibility. Download the invoice and compare amounts/history.
-5. Retry an operation whose response was lost using **Retry Same Demo Attempt**, including after reload. Confirm there is no duplicate installment. Concurrent amount/key/cancellation cases have automated PostgreSQL evidence above.
+5. Retry an operation whose response was lost using **Retry Payment**, including after reload. Confirm there is no duplicate installment. Concurrent amount/key/cancellation cases have automated PostgreSQL evidence above.
 6. Check a separate wholly unpaid order can still be cancelled after failed attempts and cannot receive a subsequent new payment. Check another Customer and Employee cannot access or pay the invoice.
 7. Compare desktop and narrow-screen controls with references, then deploy matching frontend/backend and repeat the owner/Admin workflow over Vercel/Render HTTPS before closing S09.
+
+## Product wording and PDF follow-up
+
+At the task owner's request, payment, order and invoice surfaces now use product wording (Pay Invoice, Record Payment, Payment History, Download Invoice), without demo/simulation banners. The underlying simulated settlement behavior, ownership and retry guards are unchanged; real credentials are still not collected. Historical system-generated order notes are normalized for display without rewriting stored records.
+
+Invoice downloads now return an actual `application/pdf` attachment with a `.pdf` filename. ReportLab renders the stored invoice/customer snapshot, itemization, tax, totals and payment history. Plain text is escaped before rendering. Long invoices paginate with repeated table headings and numbered footers. The obsolete HTML invoice renderer was removed.
+
+PDF QA: generated and visually inspected a one-page invoice and representative first/continuation/final pages of a 12-page long-description invoice. Automated PDF parsing checks all 50 long-test items survive pagination, validates stored amounts and filename/MIME type, and verifies retry failures and account access remain protected. Native portal visual checks remain unavailable.
+
+Follow-up checks: **140 backend tests passed, 1 optional database smoke test skipped; 5 frontend tests passed; frontend build and whitespace checks passed.** The local backend was restarted on port 8001 with PDF generation enabled; health and its documented PDF response type were verified. No new database migration was needed for this follow-up. Changes remain uncommitted and undeployed.

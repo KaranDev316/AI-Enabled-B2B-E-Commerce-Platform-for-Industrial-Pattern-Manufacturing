@@ -27,7 +27,7 @@ export async function sendPaymentAttempt(invoiceId, attempt) {
   });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = new Error(body?.detail?.message || 'Unable to record the simulated payment.');
+    const error = new Error(body?.detail?.message || 'Unable to record the payment.');
     // Auth/access failures cannot establish whether an earlier lost-response attempt committed.
     error.definitive = [400, 409, 422].includes(response.status);
     throw error;

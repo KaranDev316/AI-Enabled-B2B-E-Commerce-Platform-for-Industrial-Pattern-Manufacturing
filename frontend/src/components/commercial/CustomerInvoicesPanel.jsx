@@ -93,8 +93,7 @@ export default function CustomerInvoicesPanel() {
 
 
       <div className="kpc-commercial-demo-banner">
-        <strong>Academic Demonstration Billing:</strong> Record partial simulated payments against issued invoices.
-        Full settlement confirms the order. No real card, bank, or UPI credentials are collected.
+        View your invoices, track payments, and settle outstanding balances.
       </div>
 
       <div className="kpc-commercial-kpi-grid cols-3">
@@ -104,14 +103,14 @@ export default function CustomerInvoicesPanel() {
           <small>Across {summary.activeCount} active invoice(s)</small>
         </div>
         <div className="kpc-commercial-kpi tone-success">
-          <span>Simulated Paid</span>
+          <span>Paid</span>
           <strong>{formatInr(summary.paid)}</strong>
-          <small>Recorded demonstration settlement</small>
+          <small>Recorded payments</small>
         </div>
         <div className="kpc-commercial-kpi">
           <span>Issued Invoices</span>
           <strong>{invoices.length}</strong>
-          <small>One demo invoice per order</small>
+          <small>One invoice per order</small>
         </div>
       </div>
 
@@ -143,7 +142,7 @@ export default function CustomerInvoicesPanel() {
         {loading ? (
           <div className="kpc-commercial-state-box">
             <h3>Loading invoices...</h3>
-            <p>Fetching your issued demo invoices.</p>
+            <p>Fetching your issued invoices.</p>
           </div>
         ) : error ? (
           <div className="kpc-commercial-state-box">
@@ -156,7 +155,7 @@ export default function CustomerInvoicesPanel() {
         ) : invoices.length === 0 ? (
           <div className="kpc-commercial-state-box">
             <h3>No invoices issued yet</h3>
-            <p>A demonstration invoice is generated automatically when you accept an eligible quotation.</p>
+            <p>A invoice is generated automatically when you accept an eligible quotation.</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -204,7 +203,7 @@ export default function CustomerInvoicesPanel() {
                             className="btn btn-outline-secondary btn-sm"
                             href={buildDemoInvoiceDownloadUrl(inv.id)}
                           >
-                            Download Demo
+                            Download PDF
                           </ProtectedDownload>
                           <button
                             type="button"
@@ -212,7 +211,7 @@ export default function CustomerInvoicesPanel() {
                             disabled={inv.status === 'cancelled'}
                             onClick={() => openInvoiceDetail(inv.id)}
                           >
-                            Demo Payment
+                            Payment
                           </button>
                         </div>
                       </td>
@@ -231,7 +230,7 @@ export default function CustomerInvoicesPanel() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {selectedInvoice ? `Demo Invoice ${selectedInvoice.invoice_number}` : 'Invoice Details'}
+                  {selectedInvoice ? `Invoice ${selectedInvoice.invoice_number}` : 'Invoice Details'}
                 </h5>
                 <button
                   type="button"
@@ -250,7 +249,7 @@ export default function CustomerInvoicesPanel() {
                   <div className="alert alert-danger mb-0">{detailError}</div>
                 ) : selectedInvoice ? (
                   <>
-                    <div className="kpc-commercial-demo-banner">{selectedInvoice.demo_notice}</div>
+
                     <div className="kpc-commercial-detail-meta">
                       <div>
                         <label>Order Number</label>
@@ -304,7 +303,7 @@ export default function CustomerInvoicesPanel() {
                         <span>{formatInr(selectedInvoice.subtotal_amount)}</span>
                       </div>
                       <div className="kpc-commercial-totals-row">
-                        <span>Sample Tax ({Number(selectedInvoice.tax_rate_percent).toFixed(2)}% — Demo)</span>
+                        <span>Tax ({Number(selectedInvoice.tax_rate_percent).toFixed(2)}%)</span>
                         <span>{formatInr(selectedInvoice.tax_amount)}</span>
                       </div>
                       <div className="kpc-commercial-totals-row is-total">
@@ -312,7 +311,7 @@ export default function CustomerInvoicesPanel() {
                         <span>{formatInr(selectedInvoice.total_amount)}</span>
                       </div>
                       <div className="kpc-commercial-totals-row">
-                        <span>Paid (Simulated)</span>
+                        <span>Paid</span>
                         <span>{formatInr(selectedInvoice.paid_amount)}</span>
                       </div>
                       <div className="kpc-commercial-totals-row">
@@ -334,7 +333,7 @@ export default function CustomerInvoicesPanel() {
                     className="btn btn-primary btn-sm"
                     href={buildDemoInvoiceDownloadUrl(selectedInvoice.id)}
                   >
-                    Download Demo Invoice
+                    Download Invoice
                   </ProtectedDownload>
                 )}
                 <button

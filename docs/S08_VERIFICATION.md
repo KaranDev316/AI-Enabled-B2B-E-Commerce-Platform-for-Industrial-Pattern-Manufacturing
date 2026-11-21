@@ -63,3 +63,7 @@ Inspected the actual Customer Orders, Customer Invoices & Payments, Admin Orders
 For reproducible PostgreSQL checks, set `S07_POSTGRES_TEST_URL` to a dedicated localhost database ending in `_test`. Concurrency tests and migration tests create/drop only uniquely named disposable schemas. Do not use the shared application database.
 
 S08 implementation is closed with local evidence and revision 007 confirmed in the configured database. Deployment and hosted workflow verification remain required before claiming hosted completion. The S01 file-access dependency is addressed by the closure follow-up above; broader S01 closure is separate.
+
+## Invoice format follow-up
+
+The task owner subsequently requested product-facing payment wording and actual PDF invoices. The download endpoint now returns `application/pdf` with a `.pdf` filename rather than the HTML format described in the original evidence above. Ownership, immutable snapshots, one-invoice-per-order and tab-specific authorization remain unchanged. Current PDF verification is recorded in [S09 evidence](S09_VERIFICATION.md).

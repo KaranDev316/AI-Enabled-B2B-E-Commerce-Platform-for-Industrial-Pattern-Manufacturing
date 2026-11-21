@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
-import html
 import json
 from uuid import uuid4
 from typing import Optional
@@ -231,7 +230,7 @@ def create_order_and_invoice_atomic(
             event_type='order_created',
             from_status=None,
             to_status=OrderCommercialStatus.AWAITING_PAYMENT.value,
-            note='Order and academic demonstration invoice created awaiting payment.',
+            note='Order and invoice created awaiting payment.',
         )
         db.add(event)
         db.flush()
@@ -401,7 +400,10 @@ def get_order_detail_for_user(db: DBSession, order_id: int, user: User) -> Order
         successful_payment_count=snapshot.successful_payment_count if snapshot else 0,
         cancellation_reason=snapshot.cancellation_reason if snapshot else None,
         invoice=linked_invoice,
-        status_history=[OrderStatusEventResponse.model_validate(e) for e in events],
+        status_history=[OrderStatusEventResponse.model_validate(e).model_copy(update={'note': {
+            'Order and academic demonstration invoice created awaiting payment.': 'Order and invoice created awaiting payment.',
+            'Full simulated settlement recorded. Eligible for production assignment.': 'Payment completed. Order ready for production assignment.',
+        }.get(e.note, e.note)}) for e in events],
     )
 
 
@@ -583,109 +585,3 @@ def get_invoice_detail_for_user(db: DBSession, invoice_id: int, user: User) -> I
             select(SimulatedPayment).where(SimulatedPayment.invoice_id == invoice.id)
             .order_by(SimulatedPayment.created_at, SimulatedPayment.id))],
     )
-
-
-def render_demo_invoice_html(detail: InvoiceDetailResponse) -> str:
-    """Renders a self-contained printable HTML academic demonstration invoice from immutable snapshot."""
-    esc = html.escape
-    issued_str = detail.issued_at.strftime('%Y-%m-%d %H:%M UTC') if detail.issued_at else '—'
-    due_str = detail.due_at.strftime('%Y-%m-%d') if detail.due_at else '—'
-
-    rows_html = '\n'.join(
-        f"""
-        <tr>
-          <td>{idx}</td>
-          <td>{esc(item.description)}</td>
-          <td style="text-align:right">{item.quantity} {esc(item.unit)}</td>
-          <td style="text-align:right">INR {item.unit_price:.2f}</td>
-          <td style="text-align:right">INR {item.line_total:.2f}</td>
-        </tr>
-        """
-        for idx, item in enumerate(detail.items, start=1)
-    )
-
-    gstin_line = f'<p><strong>GSTIN:</strong> {esc(detail.customer_gstin)}</p>' if detail.customer_gstin else ''
-    address_line = f'<p>{esc(detail.customer_address)}</p>' if detail.customer_address else ''
-    payments_html = ''.join(
-        f'<tr><td>DEMO-{payment.id}</td><td>{esc(payment.created_at.isoformat())}</td>'
-        f'<td>{esc(payment.outcome.title())}</td><td>INR {payment.amount:.2f}</td></tr>'
-        for payment in detail.payments
-    )
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>KPC Academic Demonstration Invoice — {esc(detail.invoice_number)}</title>
-  <style>
-    body {{ font-family: Arial, Helvetica, sans-serif; color: #102341; margin: 32px; background: #fff; }}
-    .banner {{ background: #fff3d7; border: 1px solid #f0c36d; color: #7c5206; padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; font-size: 13px; }}
-    .header {{ display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #062449; padding-bottom: 16px; margin-bottom: 20px; }}
-    .brand h1 {{ margin: 0; color: #062449; font-size: 26px; }}
-    .brand p {{ margin: 4px 0 0; color: #60738f; font-size: 12px; }}
-    .meta {{ text-align: right; font-size: 13px; }}
-    .meta p {{ margin: 3px 0; }}
-    .bill-to {{ margin-bottom: 20px; font-size: 13px; }}
-    .bill-to p {{ margin: 3px 0; }}
-    table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }}
-    th {{ background: #f4f7fc; color: #47607c; text-align: left; padding: 10px 12px; border-bottom: 1px solid #dbe4f0; }}
-    td {{ padding: 10px 12px; border-bottom: 1px solid #eef2f7; }}
-    .totals {{ width: 320px; margin-left: auto; font-size: 13px; }}
-    .totals tr td {{ border-bottom: 1px solid #eef2f7; padding: 7px 8px; }}
-    .totals tr.grand td {{ font-weight: bold; font-size: 15px; border-top: 2px solid #062449; color: #062449; }}
-    .footer {{ margin-top: 32px; font-size: 11px; color: #74859c; border-top: 1px solid #e4eaf3; padding-top: 12px; }}
-  </style>
-</head>
-<body>
-  <div class="banner">
-    <strong>ACADEMIC DEMONSTRATION INVOICE:</strong> {esc(detail.demo_notice)}
-  </div>
-  <div class="header">
-    <div class="brand">
-      <h1>KPC — Khodel Pattern Craft</h1>
-      <p>Industrial Pattern &amp; Casting Solutions (Demonstration Billing Output)</p>
-    </div>
-    <div class="meta">
-      <p><strong>Invoice No:</strong> {esc(detail.invoice_number)}</p>
-      <p><strong>Order No:</strong> {esc(detail.order_number)}</p>
-      <p><strong>Issued:</strong> {esc(issued_str)}</p>
-      <p><strong>Due Date:</strong> {esc(due_str)}</p>
-      <p><strong>Invoice Status:</strong> {esc(detail.status.replace('_', ' ').title())}</p>
-    </div>
-  </div>
-  <div class="bill-to">
-    <p><strong>Billed To:</strong> {esc(detail.customer_name)}</p>
-    {gstin_line}
-    {address_line}
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Description</th>
-        <th style="text-align:right">Quantity</th>
-        <th style="text-align:right">Unit Price</th>
-        <th style="text-align:right">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      {rows_html}
-    </tbody>
-  </table>
-  <table class="totals">
-    <tr><td>Subtotal</td><td style="text-align:right">INR {detail.subtotal_amount:.2f}</td></tr>
-    <tr><td>Sample Tax ({detail.tax_rate_percent:.2f}% — Demo)</td><td style="text-align:right">INR {detail.tax_amount:.2f}</td></tr>
-    <tr class="grand"><td>Total</td><td style="text-align:right">INR {detail.total_amount:.2f}</td></tr>
-    <tr><td>Paid Amount (Simulated)</td><td style="text-align:right">INR {detail.paid_amount:.2f}</td></tr>
-    <tr><td><strong>Outstanding Balance</strong></td><td style="text-align:right"><strong>INR {detail.outstanding_balance:.2f}</strong></td></tr>
-  </table>
-  <h2>Simulated payment history</h2>
-  <table><thead><tr><th>Reference</th><th>Recorded at</th><th>Outcome</th><th>Amount</th></tr></thead>
-    <tbody>{payments_html or '<tr><td colspan="4">No simulated payments recorded.</td></tr>'}</tbody>
-  </table>
-  <div class="footer">
-    Immutable commercial snapshot recorded at order creation. Editing catalogue products or tax settings does not modify this issued invoice.
-  </div>
-</body>
-</html>
-"""

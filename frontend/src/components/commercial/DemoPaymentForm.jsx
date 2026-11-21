@@ -5,14 +5,14 @@ import { emitKpcSync } from '../../utils/kpcLiveSync.jsx';
 import { formatCommercialDateTime, formatInr } from './commercialUtils';
 
 export function PaymentHistory({ payments = [] }) {
-  return <section className="mt-3" aria-label="Simulated payment history">
-    <h3 className="h6">Payment History — Demo</h3>
-    {!payments.length ? <p className="small text-muted">No simulated payments recorded.</p> :
+  return <section className="mt-3" aria-label="Payment history">
+    <h3 className="h6">Payment History</h3>
+    {!payments.length ? <p className="small text-muted">No payments recorded.</p> :
       <div className="table-responsive"><table className="table table-sm">
         <thead><tr><th>Reference / Date</th><th>Outcome</th><th className="text-end">Amount</th></tr></thead>
         <tbody>{payments.map(payment => <tr key={payment.id}>
-          <td>DEMO-{payment.id}<small className="d-block text-muted">{formatCommercialDateTime(payment.created_at)} · User #{payment.actor_user_id}</small></td>
-          <td><span className={`badge ${payment.outcome === 'succeeded' ? 'bg-success' : 'bg-danger'}`}>{payment.outcome === 'succeeded' ? 'Succeeded' : 'Failed'}</span></td>
+          <td>PAY-{payment.id}<small className="d-block text-muted">{formatCommercialDateTime(payment.created_at)} · User #{payment.actor_user_id}</small></td>
+          <td><span className={`badge ${payment.outcome === 'succeeded' ? 'bg-success' : 'bg-danger'}`}>{payment.outcome === 'succeeded' ? 'Completed' : 'Failed'}</span></td>
           <td className="text-end">{formatInr(payment.amount)}</td>
         </tr>)}</tbody>
       </table></div>}
@@ -45,8 +45,8 @@ export default function DemoPaymentForm({ invoice, onRecorded }) {
       setPending(null);
       setAmount('');
       setMessage(result.outcome === 'succeeded'
-        ? `Simulated payment DEMO-${result.id} recorded: ${formatInr(result.amount)}.`
-        : `Demo attempt DEMO-${result.id} failed as selected. The balance was not reduced.`);
+        ? `Payment PAY-${result.id} recorded: ${formatInr(result.amount)}.`
+        : `Payment PAY-${result.id} was unsuccessful. Your balance has not changed.`);
       emitKpcSync('PAYMENT_RECORDED', { invoice_id: invoice.id, order_id: invoice.order_id });
       try { await onRecorded(); } catch { setError('Payment result saved. Refresh the invoice to see its current balance.'); }
     } catch (err) {
@@ -55,7 +55,7 @@ export default function DemoPaymentForm({ invoice, onRecorded }) {
         setPending(null);
         setError(err.message);
       } else {
-        setError(attempt ? `${err.message} The result is unconfirmed. Retry the same attempt to retrieve or finish it safely.` : err.message);
+        setError(attempt ? `${err.message} Your payment has not been confirmed. Retry to check its status.` : err.message);
       }
     } finally {
       sending.current = false;
@@ -63,23 +63,23 @@ export default function DemoPaymentForm({ invoice, onRecorded }) {
     }
   }
 
-  return <section className="border-top pt-3 mt-3" aria-label="Record simulated payment">
-    <h3 className="h6">{user.role === 'admin' ? 'Record Demo Payment' : 'Make a Demo Payment'}</h3>
-    <p className="small text-muted">Simulation only. No money is collected. Full settlement confirms the order.</p>
+  return <section className="border-top pt-3 mt-3" aria-label="Record payment">
+    <h3 className="h6">{user.role === 'admin' ? 'Record Payment' : 'Pay Invoice'}</h3>
+    <p className="small text-muted">Pay in full or in installments. Your order is confirmed once the balance is settled.</p>
     {message && <p className="alert alert-info py-2" role="status">{message}</p>}
     {error && <p className="alert alert-danger py-2" role="alert">{error}</p>}
-    {pending && <p className="small">An unfinished attempt is saved in this tab. Its amount and outcome stay unchanged when retried.</p>}
+    {pending && <p className="small">A payment is awaiting confirmation. Retry to check its result without creating another payment.</p>}
     {(canPay || pending) ? <form onSubmit={submit}>
       <div className="row g-2 mb-3">
         <div className="col-sm-6"><label htmlFor={`demo-amount-${invoice.id}`} className="form-label">Amount (INR)</label>
           <input id={`demo-amount-${invoice.id}`} className="form-control" type="number" min="0.01" step="0.01" max={pending ? undefined : invoice.outstanding_balance}
             value={pending?.amount || amount} onChange={event => setAmount(event.target.value)} disabled={busy || !!pending} required /></div>
-        <div className="col-sm-6"><label htmlFor={`demo-outcome-${invoice.id}`} className="form-label">Demo outcome</label>
+        <div className="col-sm-6"><label htmlFor={`demo-outcome-${invoice.id}`} className="form-label">Payment status</label>
           <select id={`demo-outcome-${invoice.id}`} className="form-select" value={pending?.outcome || outcome} onChange={event => setOutcome(event.target.value)} disabled={busy || !!pending}>
-            <option value="succeeded">Simulate success</option><option value="failed">Simulate failure</option>
+            <option value="succeeded">Completed</option><option value="failed">Failed</option>
           </select></div>
       </div>
-      <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Recording…' : pending ? 'Retry Same Demo Attempt' : 'Confirm Demo Payment'}</button>
+      <button type="submit" className="btn btn-primary btn-sm" disabled={busy}>{busy ? 'Recording…' : pending ? 'Retry Payment' : 'Confirm Payment'}</button>
     </form> : <p className="small text-muted">{invoice.status === 'cancelled' ? 'This invoice is cancelled.' : 'No outstanding balance to pay.'}</p>}
   </section>;
 }

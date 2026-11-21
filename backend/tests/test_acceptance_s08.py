@@ -212,14 +212,14 @@ def test_invoice_download_failure_is_retryable_without_mutating_snapshot(client,
     customer=sign_in(client)
     ids=client.post(f"/api/quotations/{offer['id']}/accept",headers=customer).json()
     import app.api.invoices as invoice_api
-    original=invoice_api.render_demo_invoice_html
+    original=invoice_api.render_invoice_pdf
     def fail_download(detail):
         raise RuntimeError('Simulated generation failure')
-    monkeypatch.setattr(invoice_api,'render_demo_invoice_html',fail_download)
+    monkeypatch.setattr(invoice_api,'render_invoice_pdf',fail_download)
     endpoint=f"/api/invoices/{ids['invoice_id']}/download"
     failed=client.get(endpoint)
     assert failed.status_code==503 and failed.json()['detail']['code']=='INVOICE_DOWNLOAD_UNAVAILABLE'
     assert db_session.query(CommercialInvoice).count()==1
     assert db_session.get(CommercialInvoice,ids['invoice_id']).total_amount==Decimal(offer['total'])
-    monkeypatch.setattr(invoice_api,'render_demo_invoice_html',original)
+    monkeypatch.setattr(invoice_api,'render_invoice_pdf',original)
     assert client.get(endpoint).status_code==200

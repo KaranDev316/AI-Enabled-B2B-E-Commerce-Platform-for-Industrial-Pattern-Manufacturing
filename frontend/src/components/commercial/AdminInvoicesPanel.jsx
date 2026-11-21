@@ -13,7 +13,7 @@ import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync.jsx';
 /**
  * Admin Invoices & Payments (S08/S09 commercial view).
  * Visual references: docs/ui-ux/admin/invoices-and-payments.webp and docs/ui-ux/global/ui-kit.webp.
- * S09: immutable demo invoices, simulated settlement and payment history.
+ * S09: immutable invoices, simulated settlement and payment history.
  */
 export default function AdminInvoicesPanel() {
   const [invoices, setInvoices] = useState([]);
@@ -111,9 +111,9 @@ export default function AdminInvoicesPanel() {
           <small>Excludes cancelled orders</small>
         </div>
         <div className="kpc-commercial-kpi tone-success">
-          <span>Paid (Simulated)</span>
+          <span>Paid</span>
           <strong>{formatInr(kpis.totalPaid)}</strong>
-          <small>Demonstration settlement</small>
+          <small>Payments received</small>
         </div>
         <div className="kpc-commercial-kpi tone-warn">
           <span>Pending Balance</span>
@@ -156,7 +156,7 @@ export default function AdminInvoicesPanel() {
           {loading ? (
             <div className="kpc-commercial-state-box">
               <h3>Loading invoices...</h3>
-              <p>Fetching issued demonstration invoices.</p>
+              <p>Fetching issued invoices.</p>
             </div>
           ) : error ? (
             <div className="kpc-commercial-state-box">
@@ -237,7 +237,7 @@ export default function AdminInvoicesPanel() {
               <p className="text-muted mb-0">Select an invoice to inspect its immutable commercial snapshot.</p>
             ) : (
               <>
-                <div className="kpc-commercial-demo-banner">{detail.demo_notice}</div>
+
                 <div className="kpc-commercial-detail-meta">
                   <div>
                     <label>Customer</label>
@@ -286,14 +286,14 @@ export default function AdminInvoicesPanel() {
                     <span>{formatInr(detail.subtotal_amount)}</span>
                   </div>
                   <div className="kpc-commercial-totals-row">
-                    <span>Sample Tax ({Number(detail.tax_rate_percent).toFixed(2)}% — Demo)</span>
+                    <span>Tax ({Number(detail.tax_rate_percent).toFixed(2)}%)</span>
                     <span>{formatInr(detail.tax_amount)}</span>
                   </div>
                   <div className="kpc-commercial-totals-row is-total">
                     <span>Total</span>
                     <span>{formatInr(detail.total_amount)}</span>
                   </div>
-                  <div className="kpc-commercial-totals-row"><span>Paid (Simulated)</span><span>{formatInr(detail.paid_amount)}</span></div>
+                  <div className="kpc-commercial-totals-row"><span>Paid</span><span>{formatInr(detail.paid_amount)}</span></div>
                   <div className="kpc-commercial-totals-row"><strong>Outstanding Balance</strong><strong>{formatInr(detail.outstanding_balance)}</strong></div>
                 </div>
 
@@ -302,7 +302,7 @@ export default function AdminInvoicesPanel() {
                     className="btn btn-outline-primary btn-sm flex-grow-1"
                     href={buildDemoInvoiceDownloadUrl(detail.id)}
                   >
-                    Download Demo Invoice
+                    Download Invoice
                   </ProtectedDownload>
 
                 </div>

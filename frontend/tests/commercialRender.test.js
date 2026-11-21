@@ -34,11 +34,11 @@ test('commercial screens render without hook initialization errors; demo control
   assert.equal(module.exports.screens().length, 4);
   const invoice = { id: 5, order_id: 1, status: 'partially_paid', outstanding_balance: '25.57' };
   const html = module.exports.form(invoice);
-  assert.match(html, /Confirm Demo Payment/);
+  assert.match(html, /Confirm Payment/);
   assert.match(html, /Amount \(INR\)/);
   assert.doesNotMatch(html, /UPI ID|Card Number|Bank Account/);
   saved.set('kpc_demo_payment:1:5', JSON.stringify({ idempotency_key: 'saved-key', amount: '25.57', outcome: 'succeeded' }));
   const retry = module.exports.form({ ...invoice, status: 'paid', outstanding_balance: '0.00' });
-  assert.match(retry, /Retry Same Demo Attempt/);
+  assert.match(retry, /Retry Payment/);
   assert.match(retry, /disabled/);
 });

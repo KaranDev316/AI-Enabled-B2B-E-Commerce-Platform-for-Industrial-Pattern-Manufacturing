@@ -1,3 +1,5 @@
+from io import BytesIO
+from pypdf import PdfReader
 """S09 actual-app contract: no external payment service or shared business data."""
 from decimal import Decimal
 from uuid import uuid4
@@ -62,8 +64,10 @@ def test_partial_failed_final_settlement_and_download(client, invoice, db_sessio
     assert len([ev for ev in order['status_history'] if ev['event_type'] == 'order_confirmed']) == 1
     assert len(detail['payments']) == 3
     assert detail['total_amount'] == '35.58' and detail['tax_amount'] == '5.43'
-    html = client.get(f'/api/invoices/{invoice_id}/download').text
-    assert 'Simulated payment history' in html and 'Failed' in html and 'INR 35.58' in html and 'INR 0.00' in html
+    pdf = client.get(f'/api/invoices/{invoice_id}/download')
+    assert pdf.headers['content-type'] == 'application/pdf'
+    text = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(pdf.content)).pages)
+    assert 'Payment history' in text and 'Failed' in text and 'INR 35.58' in text and 'INR 0.00' in text
     assert db_session.query(CommercialInvoice).count() == 1
     owner = sign_in(client)
     assert client.get(f'/api/invoices/{invoice_id}').json() == detail

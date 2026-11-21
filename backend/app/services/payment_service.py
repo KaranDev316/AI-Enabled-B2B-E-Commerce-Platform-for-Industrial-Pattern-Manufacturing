@@ -39,7 +39,7 @@ def record_simulated_payment(db: Session, invoice_id: int, user: User, payload: 
             db.commit()
             return previous  # Exact original result, even after settlement/cancellation.
         if snapshot is None or not invoice.is_demo_invoice or order.status not in AWAITING_PAYMENT_STATUSES or invoice.status not in ('unpaid', 'partially_paid'):
-            conflict('PAYMENT_NOT_ALLOWED', 'Only an outstanding demonstration invoice awaiting payment can receive a new payment.')
+            conflict('PAYMENT_NOT_ALLOWED', 'Only an outstanding invoice awaiting payment can receive a new payment.')
         paid = db.scalar(select(func.coalesce(func.sum(SimulatedPayment.amount), 0)).where(SimulatedPayment.invoice_id == invoice_id, SimulatedPayment.outcome == 'succeeded'))
         paid = Decimal(paid)
         if paid != invoice.paid_amount or paid != snapshot.paid_amount:
@@ -58,7 +58,7 @@ def record_simulated_payment(db: Session, invoice_id: int, user: User, payload: 
                 old_status = order.status
                 order.status = 'confirmed'
                 db.add(OrderStatusEvent(order_id=order.id, actor_user_id=user.id, event_type='order_confirmed',
-                    from_status=old_status, to_status='confirmed', note='Full simulated settlement recorded. Eligible for production assignment.'))
+                    from_status=old_status, to_status='confirmed', note='Payment completed. Order ready for production assignment.'))
         db.flush()
         result = SimulatedPaymentResponse.model_validate(attempt)
         db.commit()

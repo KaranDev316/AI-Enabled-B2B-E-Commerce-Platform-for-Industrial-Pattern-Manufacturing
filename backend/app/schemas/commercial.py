@@ -131,7 +131,4 @@ class InvoiceDetailResponse(InvoiceSummaryResponse):
     items: list[CommercialLineItem]
     order_status: str
     payments: list[SimulatedPaymentResponse] = Field(default_factory=list)
-    demo_notice: str = (
-        'Academic Demonstration Invoice — Sample tax figures are for demonstration only and do not '
-        'constitute a statutory tax invoice or real financial transaction.'
-    )
+    demo_notice: str = 'Invoice totals reflect the accepted quotation.'

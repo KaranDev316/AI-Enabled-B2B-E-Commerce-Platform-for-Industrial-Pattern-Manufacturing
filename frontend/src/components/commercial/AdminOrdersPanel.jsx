@@ -260,7 +260,7 @@ export default function AdminOrdersPanel() {
                 <div className="alert alert-light border small mb-3">
                   {detail.can_assign
                     ? 'Fully settled and confirmed. Ready for production assignment in S10.'
-                    : 'Production assignment is blocked until full demonstration settlement confirms the order.'}
+                    : 'Production assignment is blocked until full settlement confirms the order.'}
                 </div>
 
                 {detail.cancellation_reason && (
@@ -285,7 +285,7 @@ export default function AdminOrdersPanel() {
                     className="btn btn-outline-primary btn-sm w-100"
                     href={buildDemoInvoiceDownloadUrl(detail.invoice.id)}
                   >
-                    Download Demo Invoice ({detail.invoice.invoice_number})
+                    Download Invoice ({detail.invoice.invoice_number})
                   </ProtectedDownload>
                 )}
               </>

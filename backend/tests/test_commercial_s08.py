@@ -1,3 +1,5 @@
+from io import BytesIO
+from pypdf import PdfReader
 from decimal import Decimal
 
 import pytest
@@ -199,9 +201,13 @@ def test_demo_invoice_download_and_snapshot_immutability(s08_client, db_session,
     dl2 = s08_client.get(f'/api/invoices/{invoice.id}/download')
     assert dl1.status_code == 200
     assert dl2.status_code == 200
-    assert 'attachment; filename="KPC-DEMO-' in dl1.headers['content-disposition']
-    body = dl1.text
-    assert 'ACADEMIC DEMONSTRATION INVOICE' in body
+    assert 'attachment; filename="KPC-' in dl1.headers['content-disposition']
+    assert dl1.headers['content-type'] == 'application/pdf'
+    assert dl1.headers['content-disposition'].endswith('.pdf"')
+    assert dl1.content.startswith(b'%PDF-')
+    body = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(dl1.content)).pages).replace(',', '')
+    assert 'INVOICE' in body
+    assert 'DEMONSTRATION' not in body
     assert 'Housing Pattern (Cast Iron)' in body
     assert 'INR 120000.00' in body
     assert 'INR 21600.00' in body

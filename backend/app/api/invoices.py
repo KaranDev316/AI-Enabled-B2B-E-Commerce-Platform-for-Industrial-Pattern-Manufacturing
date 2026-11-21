@@ -12,8 +12,8 @@ from app.services.payment_service import record_simulated_payment
 from app.services.commercial_service import (
     get_invoice_detail_for_user,
     list_invoices_for_user,
-    render_demo_invoice_html,
 )
+from app.services.invoice_pdf import render_invoice_pdf
 
 router = APIRouter(prefix='/api/invoices', tags=['invoices'])
 
@@ -44,7 +44,8 @@ def get_invoice_detail(
     return get_invoice_detail_for_user(db, invoice_id, current_user)
 
 
-@router.get('/{invoice_id}/download')
+@router.get('/{invoice_id}/download', response_class=Response,
+            responses={200: {'content': {'application/pdf': {'schema': {'type': 'string', 'format': 'binary'}}}}})
 def download_demo_invoice(
     invoice_id: int,
     db: DBSession = Depends(get_db),
@@ -52,13 +53,13 @@ def download_demo_invoice(
 ):
     detail = get_invoice_detail_for_user(db, invoice_id, current_user)
     try:
-        html_content = render_demo_invoice_html(detail)
+        pdf_content = render_invoice_pdf(detail)
     except Exception:
-        raise HTTPException(503, detail={'code':'INVOICE_DOWNLOAD_UNAVAILABLE', 'message':'Unable to generate the demo invoice. Please try again.'}) from None
-    filename = f'KPC-DEMO-{detail.invoice_number}.html'
+        raise HTTPException(503, detail={'code':'INVOICE_DOWNLOAD_UNAVAILABLE', 'message':'Unable to generate the invoice PDF. Please try again.'}) from None
+    filename = f'KPC-{detail.invoice_number}.pdf'
     return Response(
-        content=html_content.encode('utf-8'),
-        media_type='text/html; charset=utf-8',
+        content=pdf_content,
+        media_type='application/pdf',
         headers={
             'Content-Disposition': f'attachment; filename="{filename}"',
             'X-Content-Type-Options': 'nosniff',

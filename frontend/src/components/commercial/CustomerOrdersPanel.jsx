@@ -368,7 +368,7 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
                         <span>{formatInr(orderDetail.subtotal_amount)}</span>
                       </div>
                       <div className="kpc-commercial-totals-row">
-                        <span>Sample Tax ({Number(orderDetail.tax_rate_percent).toFixed(2)}% — Demo)</span>
+                        <span>Tax ({Number(orderDetail.tax_rate_percent).toFixed(2)}%)</span>
                         <span>{formatInr(orderDetail.tax_amount)}</span>
                       </div>
                       <div className="kpc-commercial-totals-row is-total">
@@ -402,7 +402,7 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
                     className="btn btn-outline-primary btn-sm"
                     href={buildDemoInvoiceDownloadUrl(orderDetail.invoice.id)}
                   >
-                    Download Demo Invoice
+                    Download Invoice
                   </ProtectedDownload>
                 )}
                 {onOpenInvoices && (
@@ -452,7 +452,7 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
                 </div>
                 <div className="modal-body">
                   <p className="small text-muted">
-                    This action marks the order and its demo invoice as cancelled while preserving commercial history.
+                    This action marks the order and its invoice as cancelled while preserving commercial history.
                     Cancelled orders cannot receive payments or be assigned to production.
                   </p>
                   {cancelError && <div className="alert alert-danger">{cancelError}</div>}
