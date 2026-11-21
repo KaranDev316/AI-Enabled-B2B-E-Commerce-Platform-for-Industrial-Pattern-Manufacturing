@@ -1,3 +1,4 @@
+import { ProtectedDownload } from '../ProtectedFiles';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   buildDemoInvoiceDownloadUrl,
@@ -269,12 +270,12 @@ export default function AdminOrdersPanel() {
                 </ul>
 
                 {detail.invoice && (
-                  <a
+                  <ProtectedDownload
                     className="btn btn-outline-primary btn-sm w-100"
                     href={buildDemoInvoiceDownloadUrl(detail.invoice.id)}
                   >
                     Download Demo Invoice ({detail.invoice.invoice_number})
-                  </a>
+                  </ProtectedDownload>
                 )}
               </>
             )}

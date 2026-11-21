@@ -1,3 +1,4 @@
+import { ProtectedDownload } from '../ProtectedFiles';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   buildDemoInvoiceDownloadUrl,
@@ -193,12 +194,12 @@ export default function CustomerInvoicesPanel() {
                           >
                             Inspect
                           </button>
-                          <a
+                          <ProtectedDownload
                             className="btn btn-outline-secondary btn-sm"
                             href={buildDemoInvoiceDownloadUrl(inv.id)}
                           >
                             Download Demo
-                          </a>
+                          </ProtectedDownload>
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
@@ -318,12 +319,12 @@ export default function CustomerInvoicesPanel() {
               </div>
               <div className="modal-footer">
                 {selectedInvoice && (
-                  <a
+                  <ProtectedDownload
                     className="btn btn-primary btn-sm"
                     href={buildDemoInvoiceDownloadUrl(selectedInvoice.id)}
                   >
                     Download Demo Invoice
-                  </a>
+                  </ProtectedDownload>
                 )}
                 <button
                   type="button"

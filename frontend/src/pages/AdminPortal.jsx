@@ -1,3 +1,4 @@
+import { ProtectedDownload, ProtectedPreview } from '../components/ProtectedFiles';
 import AdminOrdersPanel from '../components/commercial/AdminOrdersPanel';
 import AdminInvoicesPanel from '../components/commercial/AdminInvoicesPanel';
 import { QuotationWorkspace } from '../components/QuotationWorkspace';
@@ -1041,13 +1042,13 @@ export function AdminPortal() {
                                   👁 Preview
                                 </button>
                               )}
-                              <a
+                              <ProtectedDownload
                                 href={`${API_BASE}/rfqs/${selectedRfqModal.id}/files/${file.id}?disposition=attachment`}
                                 className="btn btn-sm btn-outline-secondary py-0 px-2"
                                 download
                               >
                                 ⬇ Download
-                              </a>
+                              </ProtectedDownload>
                             </div>
                           </div>
                         ))}
@@ -1289,7 +1290,7 @@ export function AdminPortal() {
                   </h5>
                 </div>
                 <div className="d-flex gap-2">
-                  <a
+                  <ProtectedDownload
                     href={
                       previewFile.ticketId
                         ? `${API_BASE}/support/tickets/${previewFile.ticketId}/files/${previewFile.fileId}?disposition=attachment`
@@ -1299,7 +1300,7 @@ export function AdminPortal() {
                     download
                   >
                     ⬇ Download File
-                  </a>
+                  </ProtectedDownload>
                   <button
                     type="button"
                     className="btn-close" aria-label="Close"
@@ -1311,33 +1312,13 @@ export function AdminPortal() {
                 className="modal-body p-2 text-center"
                 style={{ minHeight: '500px', maxHeight: '80vh', overflowY: 'auto' }}
               >
-                {previewFile.contentType === 'application/pdf' ? (
-                  <iframe
-                    src={
-                      previewFile.ticketId
-                        ? `${API_BASE}/support/tickets/${previewFile.ticketId}/files/${previewFile.fileId}?disposition=inline`
-                        : `${API_BASE}/rfqs/${previewFile.rfqId}/files/${previewFile.fileId}?disposition=inline`
-                    }
-                    title={previewFile.fileName}
-                    style={{
-                      width: '100%',
-                      height: '70vh',
-                      border: 'none',
-                      borderRadius: '8px',
-                    }}
-                  />
-                ) : (
-                  <img
-                    src={
-                      previewFile.ticketId
-                        ? `${API_BASE}/support/tickets/${previewFile.ticketId}/files/${previewFile.fileId}?disposition=inline`
-                        : `${API_BASE}/rfqs/${previewFile.rfqId}/files/${previewFile.fileId}?disposition=inline`
-                    }
-                    alt={previewFile.fileName}
-                    className="img-fluid rounded shadow-sm"
-                    style={{ maxHeight: '70vh', objectFit: 'contain' }}
-                  />
-                )}
+                <ProtectedPreview
+                  href={previewFile.ticketId
+                    ? `${API_BASE}/support/tickets/${previewFile.ticketId}/files/${previewFile.fileId}?disposition=inline`
+                    : `${API_BASE}/rfqs/${previewFile.rfqId}/files/${previewFile.fileId}?disposition=inline`}
+                  fileName={previewFile.fileName}
+                  contentType={previewFile.contentType}
+                />
               </div>
             </div>
           </div>
@@ -1488,14 +1469,14 @@ export function AdminPortal() {
                               👁 Inspect
                             </button>
                           )}
-                          <a
+                          <ProtectedDownload
                             href={`${API_BASE}/support/tickets/${selectedAdminTicket.id}/files/${att.id}?disposition=attachment`}
                             download
                             className="btn btn-outline-secondary btn-sm py-0 px-2"
                             style={{ fontSize: '0.75rem' }}
                           >
                             ⬇ Download
-                          </a>
+                          </ProtectedDownload>
                         </div>
                       ))}
                     </div>

@@ -155,6 +155,8 @@ S03 uses S01's running deployment/application foundation; public reads do not re
 
 ### S08 — Accept once, inspect invoice, and cancel an entirely unpaid order
 
+**Status:** Implementation closed with local verification (2026-11-21); hosted release acceptance pending. See [S08 evidence and remaining release check](S08_VERIFICATION.md).
+
 **Goal and flow:** Customer accepts latest eligible offer → one awaiting-payment order and one demo invoice are committed → owner/Admin inspect/download invoice. A separate zero-payment order can be cancelled.
 
 **Scope:** Eligibility checked at action time, duplicate-safe acceptance, quote/order/invoice atomicity, immutable commercial snapshots, order/invoice lists/details, demo invoice download, and zero-payment cancellation. No payment button is enabled until S09.

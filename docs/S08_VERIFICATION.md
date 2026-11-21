@@ -1,6 +1,19 @@
 # S08 — Acceptance, orders, demo invoices and unpaid cancellation
 
-Implementation and isolated local verification: 2026-11-20. Hosted verification remains pending. The shared Supabase database has NOT been migrated to 007 by this implementation task.
+**Implementation status: CLOSED (locally verified, 2026-11-21). Hosted release verification: PENDING.**
+
+Initial implementation and isolated verification: 2026-11-20. A read-only check on 2026-11-21 confirmed the configured Supabase database is already at revision **007**; no shared database changes were needed during this follow-up.
+
+## Closure follow-up — 2026-11-21
+
+- Fixed the S01 file-access dependency affecting S08: invoice downloads from the acceptance screen and all Customer/Admin commercial panels fetch a blob using the current tab's bearer token, with cookies omitted. RFQ/support downloads and previews, quotation drawings and private Admin catalogue images use the same authenticated file path. Tokens never appear in file URLs. Missing/expired sessions and access failures show an error; previews support retry and revoke object URLs when replaced or closed.
+- Restricted automatic Authorization/CSRF forwarding to same-origin `/api` paths. External URLs containing `/api/` receive no automatically added credentials.
+- Added an actual-app regression proving that another customer's cookie cannot change invoice access, an Admin cookie cannot elevate another customer, and Admin logout does not prevent the owning customer's token from downloading the invoice.
+- Fresh full backend run against isolated PostgreSQL: **121 passed, 1 skipped**. All PostgreSQL race, migration and startup cases ran; the skipped check is the optional separate `TEST_DATABASE_URL` connection smoke test. `node --test frontend/tests/sessionFiles.test.js`: **2 passed**. Frontend build and diff whitespace check passed.
+- Reviewed the Customer/Admin Orders and Invoices references, Admin Product Management and global UI kit. Retained existing layout/classes; download anchors became buttons so they can fetch with headers. Attachment previews retain their existing image/PDF area and add loading/error/retry feedback. Drawing download buttons retain full-width alignment.
+- Fresh desktop/mobile browser verification could not run because native browser automation failed to initialize. Earlier browser evidence below applies to the initial S08 implementation, not this follow-up. The deployed Render API schema check timed out. These changes have not been pushed or deployed by this follow-up.
+
+The implementation is closed; **hosted acceptance remains open** until these fixes are deployed and the owner/Admin acceptance → invoice download → unpaid cancellation flow passes on Vercel/Render, including separate tabs in one browser profile. This record does not close S01 as a whole.
 
 ## Scope and implementation
 
@@ -49,4 +62,4 @@ Inspected the actual Customer Orders, Customer Invoices & Payments, Admin Orders
 
 For reproducible PostgreSQL checks, set `S07_POSTGRES_TEST_URL` to a dedicated localhost database ending in `_test`. Concurrency tests and migration tests create/drop only uniquely named disposable schemas. Do not use the shared application database.
 
-S08 is implemented and locally verified. Shared migration, deployment and hosted workflow verification remain required before claiming hosted completion. The separate multi-tab session synchronization issue remains outside this slice.
+S08 implementation is closed with local evidence and revision 007 confirmed in the configured database. Deployment and hosted workflow verification remain required before claiming hosted completion. The S01 file-access dependency is addressed by the closure follow-up above; broader S01 closure is separate.

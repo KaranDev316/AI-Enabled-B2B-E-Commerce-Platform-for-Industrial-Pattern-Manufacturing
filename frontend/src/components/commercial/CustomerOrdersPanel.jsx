@@ -1,3 +1,4 @@
+import { ProtectedDownload } from '../ProtectedFiles';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   buildDemoInvoiceDownloadUrl,
@@ -393,12 +394,12 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
               </div>
               <div className="modal-footer">
                 {orderDetail?.invoice && (
-                  <a
+                  <ProtectedDownload
                     className="btn btn-outline-primary btn-sm"
                     href={buildDemoInvoiceDownloadUrl(orderDetail.invoice.id)}
                   >
                     Download Demo Invoice
-                  </a>
+                  </ProtectedDownload>
                 )}
                 {onOpenInvoices && (
                   <button

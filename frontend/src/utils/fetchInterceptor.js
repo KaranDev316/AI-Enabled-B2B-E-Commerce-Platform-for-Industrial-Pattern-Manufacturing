@@ -7,6 +7,8 @@
  * 3. All state-changing mutations (POST, PUT, PATCH, DELETE) automatically include X-CSRF-Token.
  */
 
+import { isInternalApiUrl } from './apiUrl.js';
+
 if (typeof window !== 'undefined' && !window.__kpcFetchInterceptorInstalled) {
   window.__kpcFetchInterceptorInstalled = true;
   const originalFetch = window.fetch;
@@ -15,7 +17,7 @@ if (typeof window !== 'undefined' && !window.__kpcFetchInterceptorInstalled) {
     let url = typeof input === 'string' ? input : (input && input.url ? input.url : '');
 
     // Target internal API requests
-    const isApiRequest = url.startsWith('/api') || url.includes('/api/');
+    const isApiRequest = isInternalApiUrl(url);
 
     if (isApiRequest) {
       const token = sessionStorage.getItem('kpc_auth_token');

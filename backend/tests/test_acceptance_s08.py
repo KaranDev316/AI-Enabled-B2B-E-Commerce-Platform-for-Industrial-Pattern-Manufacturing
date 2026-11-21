@@ -99,6 +99,33 @@ def test_accept_once_real_app_snapshot_access_and_cancellation(client, offer, db
     assert db_session.query(Order).count() == 1
 
 
+def test_tab_tokens_keep_invoice_downloads_isolated_across_login_and_logout(client, offer):
+    def tab_login(role):
+        names = {'customer': ('customer.one', 'Customer'), 'other': ('customer.two', 'Customer'), 'admin': ('admin.one', 'Admin')}
+        email, password = names[role]
+        response = client.post('/api/auth/login', json={'email': email+'@example.test', 'password': password+'@12345'}, headers={'Origin': ORIGIN})
+        assert response.status_code == 200
+        data = response.json()
+        return {'Authorization': 'Bearer '+data['token'], 'Origin': ORIGIN, 'X-CSRF-Token': data['csrf_token']}
+
+    owner = tab_login('customer')
+    accepted = client.post(f"/api/quotations/{offer['id']}/accept", headers=owner)
+    assert accepted.status_code == 200
+    endpoint = f"/api/invoices/{accepted.json()['invoice_id']}/download"
+    other = tab_login('other')  # Shared cookie now belongs to another customer.
+    assert client.get(endpoint, headers=owner).status_code == 200
+    assert client.get(endpoint, headers=other).status_code == 403
+    admin = tab_login('admin')
+    assert client.get(endpoint, headers=admin).status_code == 200
+    assert client.get(endpoint, headers=other).status_code == 403  # Admin cookie cannot grant access.
+    assert client.post('/api/auth/logout', headers=admin).status_code == 200
+    assert client.get(endpoint, headers=admin).status_code == 401
+    assert client.get(endpoint, headers=owner).status_code == 200  # Other tab's logout cannot break download.
+    client.cookies.clear()
+    assert client.get(endpoint, headers=owner).status_code == 200
+    assert client.get(endpoint).status_code == 401
+
+
 @pytest.mark.parametrize('state', ['draft', 'expired', 'superseded', 'rejected'])
 def test_ineligible_acceptance_creates_no_commercial_records(client, offer, db_session, state):
     if state == 'superseded':
