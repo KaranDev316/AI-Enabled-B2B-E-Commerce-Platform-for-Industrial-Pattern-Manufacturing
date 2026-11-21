@@ -16,6 +16,7 @@ from app.models_commercial import (
     OrderCommercialSnapshot,
     OrderCommercialStatus,
     OrderStatusEvent,
+    SimulatedPayment,
 )
 from app.schemas.commercial import (
     CommercialLineItem,
@@ -25,6 +26,7 @@ from app.schemas.commercial import (
     OrderDetailResponse,
     OrderStatusEventResponse,
     OrderSummaryResponse,
+    SimulatedPaymentResponse,
 )
 
 TWO_PLACES = Decimal('0.01')
@@ -288,6 +290,9 @@ def _serialize_order_summary(
         production_status=None,  # S08 boundary: no invented production/job history
         estimated_lead_time_days=snapshot.estimated_lead_time_days if snapshot else None,
         can_cancel=can_cancel,
+        can_assign=(role == UserRole.ADMIN.value and order.status == 'confirmed'
+                    and snapshot is not None and paid == total and total > 0
+                    and snapshot.successful_payment_count > 0),
         invoice_id=invoice.id if invoice else None,
         invoice_number=invoice.invoice_number if invoice else None,
         created_at=order.created_at,
@@ -361,7 +366,7 @@ def get_order_detail_for_user(db: DBSession, order_id: int, user: User) -> Order
         )
     _require_commercial_access(user, order.customer_id)
 
-    snapshot = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.order_id == order.id))
+    snapshot = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.order_id == order.id).execution_options(populate_existing=True))
     invoice = db.scalar(select(CommercialInvoice).where(CommercialInvoice.order_id == order.id))
     events = list(
         db.scalars(
@@ -433,7 +438,7 @@ def cancel_unpaid_order(
             detail={'code': 'ORDER_ALREADY_CANCELLED', 'message': 'This order is already cancelled.'},
         )
 
-    snapshot = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.order_id == order.id))
+    snapshot = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.order_id == order.id).execution_options(populate_existing=True))
     if snapshot is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -574,6 +579,9 @@ def get_invoice_detail_for_user(db: DBSession, invoice_id: int, user: User) -> I
         customer_address=invoice.customer_address_snapshot,
         items=_parse_items_snapshot(invoice.items_snapshot_json),
         order_status=order.status,
+        payments=[SimulatedPaymentResponse.model_validate(payment) for payment in db.scalars(
+            select(SimulatedPayment).where(SimulatedPayment.invoice_id == invoice.id)
+            .order_by(SimulatedPayment.created_at, SimulatedPayment.id))],
     )
 
 
@@ -598,6 +606,11 @@ def render_demo_invoice_html(detail: InvoiceDetailResponse) -> str:
 
     gstin_line = f'<p><strong>GSTIN:</strong> {esc(detail.customer_gstin)}</p>' if detail.customer_gstin else ''
     address_line = f'<p>{esc(detail.customer_address)}</p>' if detail.customer_address else ''
+    payments_html = ''.join(
+        f'<tr><td>DEMO-{payment.id}</td><td>{esc(payment.created_at.isoformat())}</td>'
+        f'<td>{esc(payment.outcome.title())}</td><td>INR {payment.amount:.2f}</td></tr>'
+        for payment in detail.payments
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -665,6 +678,10 @@ def render_demo_invoice_html(detail: InvoiceDetailResponse) -> str:
     <tr class="grand"><td>Total</td><td style="text-align:right">INR {detail.total_amount:.2f}</td></tr>
     <tr><td>Paid Amount (Simulated)</td><td style="text-align:right">INR {detail.paid_amount:.2f}</td></tr>
     <tr><td><strong>Outstanding Balance</strong></td><td style="text-align:right"><strong>INR {detail.outstanding_balance:.2f}</strong></td></tr>
+  </table>
+  <h2>Simulated payment history</h2>
+  <table><thead><tr><th>Reference</th><th>Recorded at</th><th>Outcome</th><th>Amount</th></tr></thead>
+    <tbody>{payments_html or '<tr><td colspan="4">No simulated payments recorded.</td></tr>'}</tbody>
   </table>
   <div class="footer">
     Immutable commercial snapshot recorded at order creation. Editing catalogue products or tax settings does not modify this issued invoice.

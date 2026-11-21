@@ -1,3 +1,4 @@
+import DemoPaymentForm, { PaymentHistory } from './DemoPaymentForm';
 import { ProtectedDownload } from '../ProtectedFiles';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -7,12 +8,12 @@ import {
   getInvoiceStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
-import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
+import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync.jsx';
 
 /**
- * Customer Invoices screen (S08).
+ * Customer Invoices screen (S08/S09).
  * Visual references: docs/ui-ux/customer/invoices-and-payments.webp and docs/ui-ux/global/ui-kit.webp.
- * S08 boundary: no payment button enabled until S09; no real UPI/card/bank credential fields.
+ * Partial simulated settlement and history; no real UPI/card/bank credential fields.
  */
 export default function CustomerInvoicesPanel() {
   const [invoices, setInvoices] = useState([]);
@@ -24,8 +25,6 @@ export default function CustomerInvoicesPanel() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
-
-  const { isLiveSynced } = useKpcLiveSync(loadInvoices, 4000);
 
   const loadInvoices = useCallback(async () => {
     setLoading(true);
@@ -49,12 +48,15 @@ export default function CustomerInvoicesPanel() {
     }
   }, [search, statusFilter]);
 
+
+
+
   useEffect(() => {
     loadInvoices();
   }, [loadInvoices]);
 
-  const openInvoiceDetail = async (invoiceId) => {
-    setDetailLoading(true);
+  const openInvoiceDetail = async (invoiceId, quiet = false) => {
+    if (!quiet) setDetailLoading(true);
     setDetailError('');
     try {
       const res = await fetch(`/api/invoices/${invoiceId}`, { credentials: 'include' });
@@ -69,6 +71,11 @@ export default function CustomerInvoicesPanel() {
       setDetailLoading(false);
     }
   };
+
+  const { isLiveSynced } = useKpcLiveSync(async () => {
+    await loadInvoices();
+    if (selectedInvoice) await openInvoiceDetail(selectedInvoice.id, true);
+  }, 4000);
 
   const summary = useMemo(() => {
     const active = invoices.filter((inv) => inv.status !== 'cancelled');
@@ -86,9 +93,8 @@ export default function CustomerInvoicesPanel() {
 
 
       <div className="kpc-commercial-demo-banner">
-        <strong>Academic Demonstration Billing:</strong> Invoices reflect immutable accepted commercial snapshots with
-        sample tax figures. Simulated payment recording is not available yet — no real card, bank, or UPI credentials
-        are collected.
+        <strong>Academic Demonstration Billing:</strong> Record partial simulated payments against issued invoices.
+        Full settlement confirms the order. No real card, bank, or UPI credentials are collected.
       </div>
 
       <div className="kpc-commercial-kpi-grid cols-3">
@@ -203,10 +209,10 @@ export default function CustomerInvoicesPanel() {
                           <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            disabled
-                            title="Simulated payment recording is not available yet"
+                            disabled={inv.status === 'cancelled'}
+                            onClick={() => openInvoiceDetail(inv.id)}
                           >
-                            Pay
+                            Demo Payment
                           </button>
                         </div>
                       </td>
@@ -314,6 +320,11 @@ export default function CustomerInvoicesPanel() {
                         <strong>{formatInr(selectedInvoice.outstanding_balance)}</strong>
                       </div>
                     </div>
+                    <PaymentHistory payments={selectedInvoice.payments} />
+                    <DemoPaymentForm key={selectedInvoice.id} invoice={selectedInvoice} onRecorded={async () => {
+                      await openInvoiceDetail(selectedInvoice.id, true);
+                      await loadInvoices();
+                    }} />
                   </>
                 ) : null}
               </div>

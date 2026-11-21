@@ -8,7 +8,7 @@ import {
   getOrderStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
-import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
+import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../../utils/kpcLiveSync.jsx';
 
 /**
  * Customer Orders screen (S08).
@@ -33,8 +33,6 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
   const [cancelError, setCancelError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
-  const { isLiveSynced } = useKpcLiveSync(loadOrders, 4000);
-
   const loadOrders = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -57,13 +55,14 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
     }
   }, [search, statusFilter]);
 
+
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
 
-  const openOrderDetail = useCallback(async (orderId) => {
+  const openOrderDetail = useCallback(async (orderId, quiet = false) => {
     setSelectedOrderId(orderId);
-    setDetailLoading(true);
+    if (!quiet) setDetailLoading(true);
     setDetailError('');
     try {
       const res = await fetch(`/api/orders/${orderId}`, { credentials: 'include' });
@@ -79,6 +78,11 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
       setDetailLoading(false);
     }
   }, []);
+
+  const { isLiveSynced } = useKpcLiveSync(async () => {
+    await loadOrders();
+    if (selectedOrderId) await openOrderDetail(selectedOrderId, true);
+  }, 4000);
 
   const handleConfirmCancel = async (e) => {
     e.preventDefault();

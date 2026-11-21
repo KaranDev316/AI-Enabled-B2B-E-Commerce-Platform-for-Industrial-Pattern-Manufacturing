@@ -273,7 +273,7 @@ Before each slice is implemented, expand its contract using the same fixture/act
 | S06 | Two-file total and 20 MB boundaries, concurrent uploads, content checks, private preview/download, restart persistence, profile images | PRP-003 AC-03-04/05/06/07; REQ-03 image portion |
 | S07 | [Expanded contract and local evidence](S07_VERIFICATION.md): version ordering, immediate superseding, manual provenance, send/reject/change-request behavior | PRP-005 AC-05-01 through AC-05-05; manual part of PRP-004 |
 | S08 | [Expanded contract and local evidence](S08_VERIFICATION.md): validity, race/rollback/idempotency, accepted snapshots, one order/invoice, unpaid cancellation | PRP-005 AC-05-02/04/06/07/08; PRP-006 AC-06-01/06/07 |
-| S09 | Partial/failed/full payment, duplicate key/content mismatch, concurrent overpayment, cancellation race | PRP-006 AC-06-03 through AC-06-08 |
+| S09 | [Expanded contract and automated evidence](S09_VERIFICATION.md): partial/failed/full payment, duplicate key/content mismatch, rollback, PostgreSQL overpayment/cancellation races and migration; browser/hosted checks pending | PRP-006 AC-06-03 through AC-06-08 |
 | S10 | Paid assignment, one-job uniqueness, assigned file access, progress limits/history/pause, truthful tracking | PRP-007 AC-07-01 through AC-07-05; PRP-006 AC-06-02 |
 | S11 | Admin-only QC, note/progress on rework, resubmission, stale decisions, separate paid/approved delivery/closure | PRP-007 AC-07-05/06/08/09 |
 | S12 | Employee issue ownership, optional own-job relation, attachments, Admin status handling | PRP-007 AC-07-07 |

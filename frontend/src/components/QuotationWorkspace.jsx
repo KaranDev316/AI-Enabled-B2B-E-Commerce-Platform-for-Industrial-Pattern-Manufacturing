@@ -1,7 +1,7 @@
 import { ProtectedDownload } from './ProtectedFiles';
 import React, { useEffect, useRef, useState } from 'react';
 import './QuotationWorkspace.css';
-import { emitKpcSync } from '../utils/kpcLiveSync';
+import { emitKpcSync } from '../utils/kpcLiveSync.jsx';
 
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(value));

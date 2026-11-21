@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -55,6 +56,7 @@ class OrderSummaryResponse(BaseModel):
     production_status: Optional[str] = None
     estimated_lead_time_days: Optional[int] = None
     can_cancel: bool
+    can_assign: bool = False
     invoice_id: Optional[int] = None
     invoice_number: Optional[str] = None
     created_at: datetime
@@ -103,11 +105,32 @@ class InvoiceSummaryResponse(BaseModel):
     due_at: Optional[datetime] = None
 
 
+class SimulatedPaymentRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    amount: Decimal = Field(gt=0, max_digits=20, decimal_places=2, allow_inf_nan=False)
+    outcome: Literal['succeeded', 'failed'] = 'succeeded'
+    idempotency_key: UUID
+
+
+class SimulatedPaymentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    invoice_id: int
+    actor_user_id: int
+    idempotency_key: str
+    amount: Decimal
+    outcome: Literal['succeeded', 'failed']
+    created_at: datetime
+
+
 class InvoiceDetailResponse(InvoiceSummaryResponse):
     customer_gstin: Optional[str] = None
     customer_address: Optional[str] = None
     items: list[CommercialLineItem]
     order_status: str
+    payments: list[SimulatedPaymentResponse] = Field(default_factory=list)
     demo_notice: str = (
         'Academic Demonstration Invoice — Sample tax figures are for demonstration only and do not '
         'constitute a statutory tax invoice or real financial transaction.'

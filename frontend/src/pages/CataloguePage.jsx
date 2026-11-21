@@ -5,7 +5,7 @@ import { demoProducts, productPrice } from '../data/catalogue';
 import { downloadSpecifications } from '../data/downloadSpecifications';
 import './LandingPage.css';
 import './CataloguePage.css';
-import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync';
+import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync.jsx';
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function ProductImage({ image, name }) {

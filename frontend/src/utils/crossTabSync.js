@@ -7,4 +7,4 @@ export {
   useKpcLiveSync,
   useKpcLiveSync as useCrossTabSync,
   LiveSyncBadge,
-} from './kpcLiveSync';
+} from './kpcLiveSync.jsx';

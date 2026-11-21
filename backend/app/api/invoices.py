@@ -5,9 +5,10 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session as DBSession
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, verify_csrf_token, verify_trusted_origin
 from app.models import User
-from app.schemas.commercial import InvoiceDetailResponse, InvoiceSummaryResponse
+from app.schemas.commercial import InvoiceDetailResponse, InvoiceSummaryResponse, SimulatedPaymentRequest, SimulatedPaymentResponse
+from app.services.payment_service import record_simulated_payment
 from app.services.commercial_service import (
     get_invoice_detail_for_user,
     list_invoices_for_user,
@@ -15,6 +16,13 @@ from app.services.commercial_service import (
 )
 
 router = APIRouter(prefix='/api/invoices', tags=['invoices'])
+
+
+@router.post('/{invoice_id}/payments', response_model=SimulatedPaymentResponse,
+             dependencies=[Depends(verify_trusted_origin), Depends(verify_csrf_token)])
+def simulate_payment(invoice_id: int, payload: SimulatedPaymentRequest,
+                     db: DBSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return record_simulated_payment(db, invoice_id, current_user, payload)
 
 
 @router.get('', response_model=list[InvoiceSummaryResponse])

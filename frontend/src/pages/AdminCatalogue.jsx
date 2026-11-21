@@ -2,7 +2,7 @@ import { ProtectedPreview } from '../components/ProtectedFiles';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { emitKpcSync } from '../utils/kpcLiveSync';
+import { emitKpcSync } from '../utils/kpcLiveSync.jsx';
 
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 const blankProduct = () => ({ name: '', slug: '', category_id: '', material_type: '', description: '', specifications: '', indicative_price: '', is_active: true });

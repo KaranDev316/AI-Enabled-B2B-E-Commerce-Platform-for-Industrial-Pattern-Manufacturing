@@ -8,7 +8,7 @@ import {
   getOrderStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
-import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
+import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync.jsx';
 
 /**
  * Admin Orders & Production (S08 commercial view).
@@ -25,8 +25,6 @@ export default function AdminOrdersPanel() {
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-
-  const { isLiveSynced } = useKpcLiveSync(loadOrders, 4000);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -53,6 +51,17 @@ export default function AdminOrdersPanel() {
       setLoading(false);
     }
   }, [search, statusFilter, selectedId]);
+
+  const { isLiveSynced } = useKpcLiveSync(async () => {
+    await loadOrders();
+    if (!selectedId) return;
+    try {
+      const response = await fetch(`/api/orders/${selectedId}`);
+      if (!response.ok) throw new Error('Unable to refresh order details.');
+      setDetail(await response.json());
+    } catch (err) { setError(err.message); }
+  }, 4000);
+
 
   useEffect(() => {
     loadOrders();
@@ -249,7 +258,9 @@ export default function AdminOrdersPanel() {
                 </div>
 
                 <div className="alert alert-light border small mb-3">
-                  Production assignment is blocked until full demonstration settlement confirms the order.
+                  {detail.can_assign
+                    ? 'Fully settled and confirmed. Ready for production assignment in S10.'
+                    : 'Production assignment is blocked until full demonstration settlement confirms the order.'}
                 </div>
 
                 {detail.cancellation_reason && (

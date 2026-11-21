@@ -171,6 +171,8 @@ S03 uses S01's running deployment/application foundation; public reads do not re
 
 ### S09 — Settle a demo invoice safely
 
+**Status:** Implemented with isolated automated verification (2026-11-21); Supabase migration 008 and local backend activation verified; browser/hosted verification pending. See [S09 evidence](S09_VERIFICATION.md).
+
 **Goal and flow:** Customer/Admin records partial simulated payment → outstanding decreases → final successful payment confirms order → matching retry returns original result.
 
 **Scope:** Positive partial payments, failure feedback/history, outstanding computation, idempotency-key content checks, prevention of overpayment under concurrency, and transactional full-settlement confirmation. Invoice views reflect payment history without changing original totals.

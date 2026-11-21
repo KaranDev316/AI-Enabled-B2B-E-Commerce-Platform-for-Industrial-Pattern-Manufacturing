@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { EmployeeLayout, EmployeeIcon as Icon, employeePages } from '../components/EmployeeLayout';
 import { EmployeeDashboard, EmployeeTasks, EmployeeIssue } from '../components/EmployeeWork';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
-import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../utils/kpcLiveSync';
+import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../utils/kpcLiveSync.jsx';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 

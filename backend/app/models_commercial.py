@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -133,3 +133,21 @@ class OrderStatusEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class SimulatedPayment(Base):
+    """Append-only demo attempts; successful rows are the settlement ledger."""
+
+    __tablename__ = 'simulated_payments'
+    __table_args__ = (
+        CheckConstraint('amount > 0', name='ck_simulated_payment_positive'),
+        CheckConstraint("outcome IN ('succeeded', 'failed')", name='ck_simulated_payment_outcome'),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey('invoices.id'), index=True, nullable=False)
+    actor_user_id: Mapped[int] = mapped_column(ForeignKey('users.id'), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(20, 2), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

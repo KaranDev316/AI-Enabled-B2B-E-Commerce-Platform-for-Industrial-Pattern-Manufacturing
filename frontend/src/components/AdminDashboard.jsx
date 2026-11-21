@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CustomerIcon as Icon } from './CustomerLayout';
-import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync';
+import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync.jsx';
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) {

@@ -1,3 +1,4 @@
+import DemoPaymentForm, { PaymentHistory } from './DemoPaymentForm';
 import { ProtectedDownload } from '../ProtectedFiles';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -7,12 +8,12 @@ import {
   getInvoiceStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
-import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
+import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync.jsx';
 
 /**
- * Admin Invoices & Payments (S08 commercial view).
+ * Admin Invoices & Payments (S08/S09 commercial view).
  * Visual references: docs/ui-ux/admin/invoices-and-payments.webp and docs/ui-ux/global/ui-kit.webp.
- * S08 boundary: inspect/download immutable demo invoices; payment recording activates in S09.
+ * S09: immutable demo invoices, simulated settlement and payment history.
  */
 export default function AdminInvoicesPanel() {
   const [invoices, setInvoices] = useState([]);
@@ -24,8 +25,6 @@ export default function AdminInvoicesPanel() {
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-
-  const { isLiveSynced } = useKpcLiveSync(loadInvoices, 4000);
 
   const loadInvoices = useCallback(async () => {
     setLoading(true);
@@ -52,6 +51,18 @@ export default function AdminInvoicesPanel() {
       setLoading(false);
     }
   }, [search, statusFilter, selectedId]);
+
+  async function refreshDetail() {
+    if (!selectedId) return;
+    const response = await fetch(`/api/invoices/${selectedId}`);
+    if (!response.ok) throw new Error('Unable to refresh invoice details.');
+    setDetail(await response.json());
+  }
+  const { isLiveSynced } = useKpcLiveSync(async () => {
+    await loadInvoices();
+    try { await refreshDetail(); } catch (err) { setError(err.message); }
+  }, 4000);
+
 
   useEffect(() => {
     loadInvoices();
@@ -282,6 +293,8 @@ export default function AdminInvoicesPanel() {
                     <span>Total</span>
                     <span>{formatInr(detail.total_amount)}</span>
                   </div>
+                  <div className="kpc-commercial-totals-row"><span>Paid (Simulated)</span><span>{formatInr(detail.paid_amount)}</span></div>
+                  <div className="kpc-commercial-totals-row"><strong>Outstanding Balance</strong><strong>{formatInr(detail.outstanding_balance)}</strong></div>
                 </div>
 
                 <div className="d-flex gap-2 flex-wrap">
@@ -291,15 +304,13 @@ export default function AdminInvoicesPanel() {
                   >
                     Download Demo Invoice
                   </ProtectedDownload>
-                  <button
-                    type="button"
-                    className="btn btn-primary btn-sm flex-grow-1"
-                    disabled
-                    title="Simulated payment recording is not available yet"
-                  >
-                    Record Payment
-                  </button>
+
                 </div>
+                <PaymentHistory payments={detail.payments} />
+                <DemoPaymentForm key={detail.id} invoice={detail} onRecorded={async () => {
+                  await refreshDetail();
+                  await loadInvoices();
+                }} />
               </>
             )}
           </div>
