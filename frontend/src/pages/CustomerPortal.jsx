@@ -635,7 +635,7 @@ export function CustomerPortal() {
       {!isRfqModalOpen && activeTab === 'invoices' && <CustomerInvoicesPanel />}
 
       {/* TAB 1: RFQ WORKSPACE (SLICE S05) */}
-      {quotationRfq && !isRfqModalOpen && activeTab === 'rfqs' && <QuotationWorkspace rfq={quotationRfq} csrfToken={csrfToken} onBack={() => setQuotationRfq(null)} onAccepted={() => navigateTab('orders')} />}
+      {quotationRfq && !isRfqModalOpen && activeTab === 'rfqs' && <QuotationWorkspace rfq={quotationRfq} csrfToken={csrfToken} onBack={() => setQuotationRfq(null)} onIssued={fetchMyRfqs} onAccepted={() => { fetchMyRfqs(); navigateTab('orders'); }} />}
       {!quotationRfq && !isRfqModalOpen && activeTab === 'rfqs' && (
         <div>
           <div className="card shadow-sm border-0 rounded-3 mb-4">
@@ -726,6 +726,8 @@ export function CustomerPortal() {
                                 ? 'bg-warning text-dark'
                                 : rfq.status === 'quoted'
                                 ? 'bg-success'
+                                : rfq.status === 'rejected'
+                                ? 'bg-danger'
                                 : 'bg-secondary'
                             }`}
                           >

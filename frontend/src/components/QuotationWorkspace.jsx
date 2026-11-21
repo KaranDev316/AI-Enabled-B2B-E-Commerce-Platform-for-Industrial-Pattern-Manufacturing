@@ -63,7 +63,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
     try {
       const saved = await request(path, { method, body: JSON.stringify(body) });
       await load(saved.id); setSuccess(notice); setDecision(''); setMessage('');
-      if (saved.status === 'sent') onIssued?.();
+      if (saved.status === 'sent' || saved.status === 'rejected') onIssued?.();
       emitKpcSync(saved.status === 'sent' ? 'QUOTATION_SENT' : 'QUOTATION_UPDATED', { rfq_id: rfq.id, id: saved.id });
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }

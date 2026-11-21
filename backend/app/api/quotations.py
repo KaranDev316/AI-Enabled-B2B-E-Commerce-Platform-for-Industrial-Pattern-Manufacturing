@@ -173,6 +173,7 @@ def decide_quote(quote_id: int, data: QuoteDecisionInput, user: User = Depends(r
     quote.decisions.append(QuotationDecision(customer_id=user.id, action=data.action, message=data.message))
     if data.action == 'reject':
         quote.status = 'rejected'
+        db.get(RFQ, quote.rfq_id).status = 'rejected'
     db.commit()
     return output(quote, latest)
 

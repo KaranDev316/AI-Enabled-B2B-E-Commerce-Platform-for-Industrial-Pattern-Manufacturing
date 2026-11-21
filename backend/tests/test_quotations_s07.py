@@ -69,6 +69,7 @@ def test_manual_lifecycle_money_and_change_request(client, rfq, db_session):
     revised = send(client, revised, admin)
     customer = login(client, 'customer')
     assert client.post(f"/api/quotations/{revised['id']}/decisions", json={'action': 'reject', 'message': 'Budget exceeded'}, headers=customer).json()['status'] == 'rejected'
+    assert client.get(f'/api/rfqs/{rfq.id}').json()['status'] == 'rejected'
     admin = login(client)
     assert client.get(f'/api/admin/rfqs/{rfq.id}/quotations').json()[0]['decisions'][0]['action'] == 'reject'
 

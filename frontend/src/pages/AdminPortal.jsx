@@ -449,6 +449,7 @@ export function AdminPortal() {
                   <option value="submitted">Submitted</option>
                   <option value="under_review">Under Review</option>
                   <option value="quoted">Quoted</option>
+                  <option value="rejected">Rejected</option>
                   <option value="closed">Closed</option>
                 </select>
               </div>
@@ -548,6 +549,8 @@ export function AdminPortal() {
                               ? 'bg-warning text-dark'
                               : rfq.status === 'quoted'
                               ? 'bg-success'
+                              : rfq.status === 'rejected'
+                              ? 'bg-danger'
                               : 'bg-secondary'
                           }`}
                         >
