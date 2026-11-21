@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CustomerIcon as Icon } from './CustomerLayout';
+import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync';
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) {
@@ -7,6 +8,10 @@ export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+
+  const { isLiveSynced } = useKpcLiveSync(() => {
+    setRetry(v => v + 1);
+  }, 4000);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError('');
@@ -40,6 +45,7 @@ export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) 
       <section className="card admin-recent-orders"><div className="customer-section-header"><h2>Recent Orders</h2><button className="customer-text-link" onClick={() => onNavigate('orders')}>View all orders ›</button></div><div className="table-responsive"><table className="table mb-0"><thead><tr><th>ORDER ID</th><th>CUSTOMER</th><th>PRODUCT</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{loading || error || !orders.length ? <tr><td colSpan="5" className="admin-table-empty">{loading ? 'Loading orders…' : error ? 'Order records are unavailable.' : 'No matching orders.'}</td></tr> : orders.slice(0,4).map(order => <tr key={order.id}><td><strong>{order.order_number}</strong></td><td>{order.customer_name}</td><td>{order.product_summary}</td><td>{order.status.replaceAll('_',' ')}</td><td><button className="btn btn-sm btn-outline-primary" onClick={() => onNavigate('orders')}>Open</button></td></tr>)}</tbody></table></div></section>
       <section className="card admin-quick-actions"><div className="customer-section-header"><h2>Quick Actions</h2></div><div className="customer-action-stack"><button className="btn btn-primary" onClick={() => onNavigate('rfqs')}><Icon name="plus" size={17}/> Review RFQs</button><button className="btn btn-outline-primary" onClick={() => onNavigate('catalogue')}><Icon name="orders" size={17}/> Manage Products</button><button className="btn btn-outline-primary" onClick={() => onNavigate('users')}><Icon name="profile" size={17}/> Manage Users</button></div></section>
     </div>
+    <LiveSyncBadge visible={isLiveSynced} />
   </div>;
 }
 

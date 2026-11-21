@@ -6,6 +6,7 @@ import {
   getInvoiceStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
+import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
 
 /**
  * Customer Invoices screen (S08).
@@ -22,6 +23,8 @@ export default function CustomerInvoicesPanel() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+
+  const { isLiveSynced } = useKpcLiveSync(loadInvoices, 4000);
 
   const loadInvoices = useCallback(async () => {
     setLoading(true);
@@ -334,6 +337,7 @@ export default function CustomerInvoicesPanel() {
           </div>
         </div>
       )}
+      <LiveSyncBadge visible={isLiveSynced} />
     </section>
   );
 }

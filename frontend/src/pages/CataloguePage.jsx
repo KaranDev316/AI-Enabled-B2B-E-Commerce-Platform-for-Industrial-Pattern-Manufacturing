@@ -5,6 +5,7 @@ import { demoProducts, productPrice } from '../data/catalogue';
 import { downloadSpecifications } from '../data/downloadSpecifications';
 import './LandingPage.css';
 import './CataloguePage.css';
+import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync';
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function ProductImage({ image, name }) {
@@ -52,6 +53,10 @@ export function CataloguePage() {
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('loading');
   const [retry, setRetry] = useState(0);
+
+  const { isLiveSynced } = useKpcLiveSync(() => {
+    setRetry(v => v + 1);
+  }, 4000);
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState([]);
   const [materials, setMaterials] = useState([]);
@@ -99,5 +104,6 @@ export function CataloguePage() {
       <button type="button" className="public-dialog-close catalogue-dialog-close" aria-label="Close product details" autoFocus onClick={() => dialogRef.current.close()}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m5 5 14 14M5 19 19 5"/></svg></button>
       {selectedProduct && <ProductDetails key={selectedProduct.id} product={selectedProduct} preview={preview} />}
     </dialog>
+    <LiveSyncBadge visible={isLiveSynced} />
   </div>;
 }

@@ -56,6 +56,8 @@ class SessionResponse(BaseModel):
     user: UserResponse
     csrf_token: str
     message: str = 'Authenticated successfully'
+    session_token: Optional[str] = None
+    token: Optional[str] = None
 
 
 class ErrorDetail(BaseModel):

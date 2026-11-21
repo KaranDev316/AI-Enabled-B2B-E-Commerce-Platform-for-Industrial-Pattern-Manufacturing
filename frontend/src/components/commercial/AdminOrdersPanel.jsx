@@ -7,6 +7,7 @@ import {
   getOrderStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
+import { useKpcLiveSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
 
 /**
  * Admin Orders & Production (S08 commercial view).
@@ -23,6 +24,8 @@ export default function AdminOrdersPanel() {
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  const { isLiveSynced } = useKpcLiveSync(loadOrders, 4000);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -278,6 +281,7 @@ export default function AdminOrdersPanel() {
           </div>
         </div>
       </div>
+      <LiveSyncBadge visible={isLiveSynced} />
     </section>
   );
 }

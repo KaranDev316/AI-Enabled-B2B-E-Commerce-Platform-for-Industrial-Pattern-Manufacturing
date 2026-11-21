@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { emitKpcSync } from '../utils/kpcLiveSync';
 
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 const blankProduct = () => ({ name: '', slug: '', category_id: '', material_type: '', description: '', specifications: '', indicative_price: '', is_active: true });
@@ -69,6 +70,7 @@ export function AdminCatalogue() {
       const saved = await request(editing === 'new' ? '/products' : `/products/${editing}`, { method: editing === 'new' ? 'POST' : 'PUT', body: JSON.stringify(productBody(form)) });
       setEditing(saved.id); setForm(productForm(saved)); await load();
       setNotice({ success: 'Product details saved. Upload images separately below.' });
+      emitKpcSync('CATALOGUE_UPDATED', { id: saved.id });
     } catch (e) { setNotice({ error: e.message }); } finally { setBusy(false); }
   }
   async function toggleProduct(p) {
@@ -78,6 +80,7 @@ export function AdminCatalogue() {
       const updated = await request(`/products/${p.id}`, { method: 'PUT', body: JSON.stringify(productBody({ ...productForm(p), is_active: !p.is_active })) });
       if (editing === p.id) setForm(productForm(updated));
       await load(); setNotice({ success: updated.is_active ? 'Product activated.' : 'Product deactivated. Historical references were retained.' });
+      emitKpcSync('CATALOGUE_UPDATED', { id: p.id, is_active: updated.is_active });
     } catch (e) { setNotice({ error: e.message }); } finally { setBusy(false); }
   }
   async function saveCategory(e) {
@@ -85,6 +88,7 @@ export function AdminCatalogue() {
     try {
       await request(categoryId ? `/categories/${categoryId}` : '/categories', { method: categoryId ? 'PUT' : 'POST', body: JSON.stringify(categoryForm) });
       setCategoryId(null); setCategoryForm({ name: '', description: '' }); await load(); setNotice({ success: 'Category saved.' });
+      emitKpcSync('CATALOGUE_UPDATED');
     } catch (e) { setNotice({ error: e.message }); } finally { setBusy(false); }
   }
   function chooseFiles(e) {
@@ -101,12 +105,16 @@ export function AdminCatalogue() {
       await request(`/products/${editing}/images`, { method: 'POST', body });
       setFiles([]); if (fileInput.current) fileInput.current.value = '';
       await load(); setNotice({ success: 'Images saved to this product.' });
+      emitKpcSync('CATALOGUE_UPDATED', { id: editing });
     } catch (e) { setNotice({ error: e.message }); } finally { setBusy(false); }
   }
   async function removeImage(image) {
     if (!window.confirm('Remove this image from the product?')) return;
     setBusy(true); setNotice({});
-    try { await request(`/products/${editing}/images/${image.id}`, { method: 'DELETE' }); await load(); setNotice({ success: 'Image removed.' }); }
+    try {
+      await request(`/products/${editing}/images/${image.id}`, { method: 'DELETE' }); await load(); setNotice({ success: 'Image removed.' });
+      emitKpcSync('CATALOGUE_UPDATED', { id: editing });
+    }
     catch (e) { setNotice({ error: e.message }); } finally { setBusy(false); }
   }
   const current = products.find(p => p.id === editing);

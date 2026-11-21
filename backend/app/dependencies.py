@@ -37,8 +37,17 @@ def get_current_session(
     db: DBSession = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> Session:
-    """Validates the session cookie and returns an active, unexpired database session."""
-    session_id = request.cookies.get(settings.session_cookie_name)
+    """Validates the session token or cookie and returns an active, unexpired database session."""
+    session_id = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token_candidate = auth_header.split(' ', 1)[1].strip()
+        if token_candidate:
+            session_id = token_candidate
+
+    if not session_id:
+        session_id = request.cookies.get(settings.session_cookie_name)
+
     if not session_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

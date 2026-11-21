@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -38,6 +38,14 @@ def create_app(frontend_dist: Path = FRONTEND_DIST) -> FastAPI:
         description='Khodel Pattern Craft B2B Platform API',
         version='0.3.0',
     )
+
+    @app.middleware('http')
+    async def add_no_cache_headers(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith('/api'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+        return response
 
     @app.get('/api/health')
     def health():

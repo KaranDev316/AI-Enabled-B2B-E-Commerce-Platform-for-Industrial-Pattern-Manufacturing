@@ -7,6 +7,7 @@ import {
   getOrderStatusMeta,
 } from './commercialUtils';
 import './commercial.css';
+import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../../utils/kpcLiveSync';
 
 /**
  * Customer Orders screen (S08).
@@ -30,6 +31,8 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
   const [cancelError, setCancelError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+
+  const { isLiveSynced } = useKpcLiveSync(loadOrders, 4000);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -99,6 +102,7 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
       setCancelTarget(null);
       setCancelReason('');
       await loadOrders();
+      emitKpcSync('ORDER_CANCELLED', { order_id: cancelTarget.id });
       if (selectedOrderId === cancelTarget.id) {
         setOrderDetail(body.order);
       }
@@ -478,6 +482,7 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
           </div>
         </div>
       )}
+      <LiveSyncBadge visible={isLiveSynced} />
     </section>
   );
 }

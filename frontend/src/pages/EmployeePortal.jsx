@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { EmployeeLayout, EmployeeIcon as Icon, employeePages } from '../components/EmployeeLayout';
 import { EmployeeDashboard, EmployeeTasks, EmployeeIssue } from '../components/EmployeeWork';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
+import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../utils/kpcLiveSync';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -24,6 +25,10 @@ export function EmployeePortal() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [feedback, setFeedback] = useState({ error: '', success: '' });
+
+  const { isLiveSynced } = useKpcLiveSync(() => {
+    // Silent background sync
+  }, 4000);
 
   function handleInputChange(e) {
     const { name, value } = e.target;
@@ -57,6 +62,7 @@ export function EmployeePortal() {
       setProfile(updatedUser.employee_profile);
       setIsEditing(false);
       setFeedback({ error: '', success: 'Your profile has been updated.' });
+      emitKpcSync('PROFILE_UPDATED');
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     } finally {
@@ -84,5 +90,6 @@ export function EmployeePortal() {
       <div className="employee-profile-side"><section className="card"><div className="customer-section-header"><h2><Icon name="company"/> Employment Details</h2></div><div className="employee-employment"><dl><div><dt>Department</dt><dd>{profile.department || 'Not assigned'}</dd></div><div><dt>Account role</dt><dd>Employee</dd></div></dl><p>Employment details are assigned by your Administrator.</p></div></section><section className="card"><div className="customer-section-header"><h2><Icon name="lock"/> Account & Security</h2></div><div className="employee-security"><div><h3>Password</h3><p>Changing your password signs you out of existing sessions.</p></div><button className="btn btn-outline-primary" onClick={() => setIsPasswordModalOpen(true)}>Change Password</button></div></section></div></div>
     </>}
     <PasswordChangeModal isOpen={isPasswordModalOpen} onClose={() => setIsPasswordModalOpen(false)}/>
+    <LiveSyncBadge visible={isLiveSynced} />
   </EmployeeLayout>;
 }

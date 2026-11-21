@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './QuotationWorkspace.css';
+import { emitKpcSync } from '../utils/kpcLiveSync';
 
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(value));
@@ -63,6 +64,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
       const saved = await request(path, { method, body: JSON.stringify(body) });
       await load(saved.id); setSuccess(notice); setDecision(''); setMessage('');
       if (saved.status === 'sent') onIssued?.();
+      emitKpcSync(saved.status === 'sent' ? 'QUOTATION_SENT' : 'QUOTATION_UPDATED', { rfq_id: rfq.id, id: saved.id });
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -72,6 +74,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
       const result = await request(`/quotations/${quote.id}/accept`, { method: 'POST' });
       setAcceptedOrder(result); await load(quote.id);
       setSuccess('Quotation accepted. Your order and demo invoice are ready, awaiting payment.');
+      emitKpcSync('QUOTATION_DECIDED', { quote_id: quote.id, order_id: result.order_id });
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }

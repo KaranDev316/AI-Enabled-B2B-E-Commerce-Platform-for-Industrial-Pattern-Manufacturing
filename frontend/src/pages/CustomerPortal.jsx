@@ -9,6 +9,7 @@ import { CustomerDashboard, CustomerUnavailable } from '../components/CustomerDa
 import { CustomerProfile } from '../components/CustomerProfile';
 import './CustomerPortal.css';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
+import { emitCrossTabEvent, useCrossTabSync, LiveSyncBadge } from '../utils/crossTabSync';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -43,6 +44,13 @@ export function CustomerPortal() {
   const [isRfqModalOpen, setIsRfqModalOpen] = useState(false);
   const [selectedRfqDetail, setSelectedRfqDetail] = useState(null);
   const [catalogueProducts, setCatalogueProducts] = useState([]);
+
+  // Cross-Tab Real-Time Sync & Live Badge
+  const { isLiveUpdated } = useCrossTabSync((event) => {
+    fetchMyRfqs();
+    fetchSupportTickets();
+    fetchCustomerContext();
+  }, 4000);
 
   const location = useLocation();
   useEffect(() => {
@@ -268,6 +276,7 @@ export function CustomerPortal() {
       const ticketInput = document.getElementById('customer-field-16');
       if (ticketInput) ticketInput.value = '';
       fetchSupportTickets();
+      emitCrossTabEvent('TICKET_CREATED', { ticket_number: created.ticket_number, id: created.id });
     } catch (err) {
       setTicketFileError(err.message);
     } finally {
@@ -315,6 +324,7 @@ export function CustomerPortal() {
       // Refresh current ticket
       await handleOpenTicket(selectedTicket.id);
       fetchSupportTickets();
+      emitCrossTabEvent('TICKET_UPDATED', { id: selectedTicket.id });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -352,6 +362,7 @@ export function CustomerPortal() {
       setProfile(updatedUser.customer_profile);
       setIsEditing(false);
       setFeedback({ error: '', success: 'Business profile updated successfully!' });
+      emitCrossTabEvent('PROFILE_UPDATED');
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     } finally {
@@ -447,6 +458,7 @@ export function CustomerPortal() {
 
       await openRfqDetails(rfqId);
       fetchMyRfqs();
+      emitCrossTabEvent('RFQ_UPDATED', { id: rfqId });
     } catch (err) {
       setExtraFileError(err.message);
     } finally {
@@ -470,6 +482,7 @@ export function CustomerPortal() {
       }
       await openRfqDetails(rfqId);
       fetchMyRfqs();
+      emitCrossTabEvent('RFQ_UPDATED', { id: rfqId });
     } catch (err) {
       alert(err.message);
     }
@@ -557,6 +570,7 @@ export function CustomerPortal() {
         notes: '',
       });
       fetchMyRfqs();
+      emitCrossTabEvent('RFQ_CREATED', { id: createdRfq.id, rfq_number: createdRfq.rfq_number });
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     } finally {
@@ -1858,6 +1872,7 @@ export function CustomerPortal() {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
+      <LiveSyncBadge visible={isLiveUpdated} />
     </CustomerLayout>
   );
 }

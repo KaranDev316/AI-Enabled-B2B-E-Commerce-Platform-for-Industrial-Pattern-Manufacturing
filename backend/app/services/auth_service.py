@@ -45,7 +45,7 @@ def rotate_session(
     """Invalidates the previous session if present and creates a fresh session."""
     if old_session_id:
         existing = db.get(Session, old_session_id)
-        if existing:
+        if existing and existing.user_id == user.id:
             db.delete(existing)
             db.commit()
     return create_session(db, user, ip_address=ip_address, user_agent=user_agent)

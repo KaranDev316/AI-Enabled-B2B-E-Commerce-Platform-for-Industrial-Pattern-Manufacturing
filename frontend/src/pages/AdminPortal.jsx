@@ -7,6 +7,7 @@ import { AdminLayout, adminPages } from '../components/AdminLayout';
 import { AdminDashboard, AdminUnavailable } from '../components/AdminDashboard';
 import { AdminCatalogue } from './AdminCatalogue';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
+import { emitCrossTabEvent, useCrossTabSync, LiveSyncBadge } from '../utils/crossTabSync';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -23,6 +24,13 @@ export function AdminPortal() {
     url.searchParams.set('tab', tab);
     window.history.replaceState(null, '', url);
   }
+
+  // Cross-Tab Real-Time Sync & Live Badge
+  const { isLiveUpdated } = useCrossTabSync(() => {
+    if (activeTab === 'users') fetchUsers();
+    else if (activeTab === 'rfqs') fetchRfqs();
+    else if (activeTab === 'support') fetchAdminTickets();
+  }, 4000);
 
   // Users State (S02)
   const [users, setUsers] = useState([]);
@@ -157,6 +165,7 @@ export function AdminPortal() {
       setAdminReplyText('');
       await handleOpenAdminTicket(selectedAdminTicket.id);
       fetchAdminTickets();
+      emitCrossTabEvent('TICKET_UPDATED', { id: selectedAdminTicket.id });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -187,6 +196,7 @@ export function AdminPortal() {
       setSelectedAdminTicket((prev) => ({ ...prev, status: updated.status }));
       setAdminStatusUpdate(updated.status);
       fetchAdminTickets();
+      emitCrossTabEvent('TICKET_UPDATED', { id: selectedAdminTicket.id, status: updated.status });
     } catch (err) {
       alert(err.message);
     } finally {
@@ -260,6 +270,7 @@ export function AdminPortal() {
         success: `RFQ ${updated.rfq_number} updated to "${nextStatus.replace('_', ' ').toUpperCase()}".`,
       });
       fetchRfqs();
+      emitCrossTabEvent('RFQ_STATUS_CHANGED', { id: rfqId, status: nextStatus });
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     } finally {
@@ -296,6 +307,7 @@ export function AdminPortal() {
         success: `Account ${targetUser.email} ${newStatus ? 'activated' : 'deactivated (sessions terminated)'}.`,
       });
       fetchUsers();
+      emitCrossTabEvent('USER_UPDATED', { id: targetUser.id, is_active: newStatus });
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     }
@@ -332,6 +344,7 @@ export function AdminPortal() {
       setTargetUserForReset(null);
       setNewResetPassword('');
       fetchUsers();
+      emitCrossTabEvent('USER_UPDATED', { id: targetUserForReset.id });
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     }
@@ -365,6 +378,7 @@ export function AdminPortal() {
       setIsEmployeeModalOpen(false);
       setEmployeeForm({ email: '', password: '', full_name: '', department: '', phone: '' });
       fetchUsers();
+      emitCrossTabEvent('USER_CREATED', { email: employeeForm.email });
     } catch (err) {
       setFeedback({ error: err.message, success: '' });
     } finally {
@@ -1541,6 +1555,7 @@ export function AdminPortal() {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
       />
+      <LiveSyncBadge visible={isLiveUpdated} />
     </AdminLayout>
   );
 }

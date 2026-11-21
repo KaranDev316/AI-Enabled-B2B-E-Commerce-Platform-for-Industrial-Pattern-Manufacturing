@@ -40,7 +40,7 @@ def test_repeated_migration_startup_is_idempotent(tmp_path):
     url=f'sqlite:///{tmp_path / "startup.db"}'
     env={**os.environ,'DATABASE_URL':url}
     for _ in range(2):
-        subprocess.run([sys.executable,str(backend/'start.py'),'--migrate-only'],cwd=backend.parent,env=env,check=True,capture_output=True)
+        subprocess.run([sys.executable,str(backend/'start.py'),'--migrate-only'],cwd=backend.parent,env=env,check=True,capture_output=True,stdin=subprocess.DEVNULL)
     scripts=ScriptDirectory.from_config(Config(str(backend/'alembic.ini')))
     engine=create_engine(url)
     with engine.connect() as conn:
@@ -67,7 +67,7 @@ def test_concurrent_postgresql_startups_apply_migrations_once():
     engine=create_engine(scoped)
     try:
         def launch(_):
-            return subprocess.run([sys.executable,str(backend/'start.py'),'--migrate-only'],cwd=backend.parent,env=env,check=True,capture_output=True,timeout=45)
+            return subprocess.run([sys.executable,str(backend/'start.py'),'--migrate-only'],cwd=backend.parent,env=env,check=True,capture_output=True,timeout=45,stdin=subprocess.DEVNULL)
         with ThreadPoolExecutor(max_workers=2) as pool:
             list(pool.map(launch,range(2)))
         scripts=ScriptDirectory.from_config(Config(str(backend/'alembic.ini')))
