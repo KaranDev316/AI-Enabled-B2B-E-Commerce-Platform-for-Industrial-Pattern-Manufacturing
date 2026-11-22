@@ -409,3 +409,55 @@ class QuotationDecision(Base):
     action: Mapped[str] = mapped_column(String(30))
     message: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InventoryMaterial(Base):
+    __tablename__ = 'inventory_materials'
+    __table_args__ = (
+        CheckConstraint('quantity >= 0 AND quantity <= 99999999999.999', name='ck_inventory_quantity'),
+        CheckConstraint('minimum_stock >= 0 AND minimum_stock <= 99999999999.999', name='ck_inventory_minimum'),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    unit: Mapped[str] = mapped_column(String(20), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False, default=Decimal('0'))
+    minimum_stock: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False, default=Decimal('0'))
+    location: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    @property
+    def stock_status(self) -> str:
+        if self.quantity == 0:
+            return 'out_of_stock'
+        return 'low_stock' if self.quantity < self.minimum_stock else 'in_stock'
+
+
+class StockAdjustment(Base):
+    __tablename__ = 'stock_adjustments'
+    __table_args__ = (
+        CheckConstraint('amount > 0', name='ck_stock_adjustment_positive'),
+        CheckConstraint('quantity_before >= 0 AND quantity_after >= 0', name='ck_stock_adjustment_balances'),
+        CheckConstraint("direction IN ('addition', 'deduction')", name='ck_stock_adjustment_direction'),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    request_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
+    material_id: Mapped[int] = mapped_column(ForeignKey('inventory_materials.id', ondelete='RESTRICT'), index=True, nullable=False)
+    material_code: Mapped[str] = mapped_column(String(40), nullable=False)
+    unit: Mapped[str] = mapped_column(String(20), nullable=False)
+    direction: Mapped[str] = mapped_column(String(20), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    quantity_before: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    quantity_after: Mapped[Decimal] = mapped_column(Numeric(14, 3), nullable=False)
+    reason: Mapped[str] = mapped_column(String(1000), nullable=False)
+    actor_id: Mapped[int] = mapped_column(ForeignKey('users.id', ondelete='RESTRICT'), nullable=False)
+    actor_email: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+# Register S10 tables for Alembic and isolated test metadata.
+from app.production_models import ProductionJob, JobStageHistory  # noqa: E402,F401
+
+from app.issue_models import ProductionIssue, ProductionIssueFile, ProductionIssueEvent  # noqa: E402,F401

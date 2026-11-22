@@ -4,6 +4,9 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.production_issues import router as production_issues_router
+from app.api.inventory import router as inventory_router
+from app.api.production import router as production_router
 from app.api.orders import router as orders_router
 from app.api.invoices import router as invoices_router
 from app.api.quotations import router as quotations_router
@@ -60,6 +63,9 @@ def create_app(frontend_dist: Path = FRONTEND_DIST) -> FastAPI:
     app.include_router(catalogue_admin_router)
     app.include_router(rfqs_router)
     app.include_router(quotations_router)
+    app.include_router(inventory_router)
+    app.include_router(production_router)
+    app.include_router(production_issues_router)
     app.include_router(orders_router)
     app.include_router(invoices_router)
     app.include_router(support_router)

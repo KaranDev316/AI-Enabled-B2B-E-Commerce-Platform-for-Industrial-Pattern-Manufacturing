@@ -1,3 +1,4 @@
+import { CustomerProduction } from '../components/ProductionWorkspace';
 import { ProtectedDownload, ProtectedPreview } from '../components/ProtectedFiles';
 import CustomerOrdersPanel from '../components/commercial/CustomerOrdersPanel';
 import CustomerInvoicesPanel from '../components/commercial/CustomerInvoicesPanel';
@@ -634,7 +635,7 @@ export function CustomerPortal() {
       )}
 
       {!isRfqModalOpen && activeTab === 'dashboard' && <CustomerDashboard rfqs={myRfqs} tickets={supportTickets} loading={loadingRfqs || loadingTickets} error={rfqError || supportError} onRetry={() => { fetchMyRfqs(); fetchSupportTickets(); }} onNavigate={navigateTab} onNewRfq={startRfq} onOpenRfq={openRfqDetails} contact={profile?.contact_person} />}
-      {!isRfqModalOpen && activeTab === 'orders' && <CustomerOrdersPanel csrfToken={csrfToken} onNewRfq={startRfq} onOpenInvoices={() => navigateTab('invoices')} />}
+      {!isRfqModalOpen && activeTab === 'orders' && <><CustomerOrdersPanel csrfToken={csrfToken} onNewRfq={startRfq} onOpenInvoices={() => navigateTab('invoices')} /><details className="card p-3 mt-3"><summary className="fw-bold">Production Tracking</summary><CustomerProduction/></details></>}
       {!isRfqModalOpen && activeTab === 'invoices' && <CustomerInvoicesPanel />}
 
       {/* TAB 1: RFQ WORKSPACE (SLICE S05) */}

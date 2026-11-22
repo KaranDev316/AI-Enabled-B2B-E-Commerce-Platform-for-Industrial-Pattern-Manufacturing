@@ -1,3 +1,6 @@
+import { AdminInventory } from '../components/AdminInventory';
+import { AdminProduction } from '../components/ProductionWorkspace';
+import { ProductionIssues } from '../components/ProductionIssues';
 import { ProtectedDownload, ProtectedPreview } from '../components/ProtectedFiles';
 import AdminOrdersPanel from '../components/commercial/AdminOrdersPanel';
 import AdminInvoicesPanel from '../components/commercial/AdminInvoicesPanel';
@@ -415,9 +418,10 @@ export function AdminPortal() {
       )}
 
       {activeTab === 'dashboard' && <AdminDashboard search={dashboardSearch} onNavigate={navigateTab} onOpenRfq={rfq => { navigateTab('rfqs'); setSelectedRfqModal(rfq); }} onOpenTicket={id => { navigateTab('support'); handleOpenAdminTicket(id); }} />}
-      {['inventory', 'reports'].includes(activeTab) && <AdminUnavailable title={adminPages.find(page => page.id === activeTab)?.title} onSupport={() => navigateTab('support')} />}
+      {['reports'].includes(activeTab) && <AdminUnavailable title={adminPages.find(page => page.id === activeTab)?.title} onSupport={() => navigateTab('support')} />}
 
-      {activeTab === 'orders' && <AdminOrdersPanel />}
+      {activeTab === 'inventory' && <AdminInventory />}
+      {activeTab === 'orders' && <AdminProductionArea />}
       {activeTab === 'invoices' && <AdminInvoicesPanel />}
       {activeTab === 'catalogue' && <AdminCatalogue />}
 
@@ -1545,4 +1549,11 @@ export function AdminPortal() {
       <LiveSyncBadge visible={isLiveUpdated} />
     </AdminLayout>
   );
+}
+
+function AdminProductionArea() {
+  const [section, setSection] = useState('orders');
+  return <><div className="production-tabs" role="group" aria-label="Orders and production">
+    {[['orders','Orders'],['production','Production Jobs'],['issues','Production Issues']].map(([id,label]) => <button key={id} type="button" aria-pressed={section===id} className={`btn ${section===id?'btn-primary':'btn-outline-primary'}`} onClick={() => setSection(id)}>{label}</button>)}
+    </div>{section==='orders'?<AdminOrdersPanel/>:section==='production'?<AdminProduction/>:<ProductionIssues admin/>}</>;
 }

@@ -1,7 +1,8 @@
+import { EmployeeProduction, EmployeeProductionDashboard } from '../components/ProductionWorkspace';
+import { ProductionIssues } from '../components/ProductionIssues';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { EmployeeLayout, EmployeeIcon as Icon, employeePages } from '../components/EmployeeLayout';
-import { EmployeeDashboard, EmployeeTasks, EmployeeIssue } from '../components/EmployeeWork';
 import { PasswordChangeModal } from '../components/PasswordChangeModal';
 import { useKpcLiveSync, emitKpcSync, LiveSyncBadge } from '../utils/kpcLiveSync.jsx';
 
@@ -80,10 +81,10 @@ export function EmployeePortal() {
     {user.must_change_password && <div className="alert alert-warning employee-password-notice" role="alert"><div><strong>Update your temporary password</strong><p>Your Administrator created this account. Set your own password to secure it.</p></div><button className="btn btn-primary" onClick={() => setIsPasswordModalOpen(true)}>Update Password</button></div>}
     {feedback.success && <div className="alert alert-success alert-dismissible" role="status">{feedback.success}<button className="btn-close" aria-label="Dismiss success message" onClick={() => setFeedback({ ...feedback, success: '' })}/></div>}
     {feedback.error && <div className="alert alert-danger alert-dismissible" role="alert">{feedback.error}<button className="btn-close" aria-label="Dismiss error message" onClick={() => setFeedback({ ...feedback, error: '' })}/></div>}
-    {activeTab === 'dashboard' && <EmployeeDashboard onNavigate={navigateTab}/>}
-    {activeTab === 'tasks' && <EmployeeTasks/>}
-    {activeTab === 'completed' && <EmployeeTasks completed/>}
-    {activeTab === 'issue' && <EmployeeIssue/>}
+    {activeTab === 'dashboard' && <EmployeeProductionDashboard onNavigate={navigateTab}/>}
+    {activeTab === 'tasks' && <EmployeeProduction/>}
+    {activeTab === 'completed' && <EmployeeProduction completed/>}
+    {activeTab === 'issue' && <ProductionIssues/>}
     {activeTab === 'profile' && <>
       <div className="employee-profile-toolbar">{!isEditing && <button className="btn btn-outline-primary" onClick={startEditing}><Icon name="profile" size={18}/> Edit Profile</button>}</div>
       <div className="employee-profile-grid"><section className="card employee-personal-card"><div className="employee-profile-identity"><span className="employee-avatar large">{initials}</span><div><h2>{profile.full_name || 'Employee'}</h2><p>{profile.department || 'Department not assigned'}</p><span className="employee-active-badge">{user.is_active ? 'Active' : 'Inactive'}</span></div></div><div className="employee-personal-body"><h3>Personal Information</h3><form onSubmit={handleSaveProfile}><div className="employee-form-grid"><label>Full Name{isEditing && <span className="customer-required"> *</span>}<input className="form-control" name="full_name" autoComplete="name" value={isEditing ? editData.full_name : profile.full_name || ''} onChange={handleInputChange} readOnly={!isEditing} required minLength={2} maxLength={255} disabled={saveLoading}/></label><label>Employee ID<input className="form-control" value={String(user.id)} readOnly/></label><label className="employee-field-wide">Email<input className="form-control" type="email" value={user.email} readOnly/></label><label className="employee-field-wide">Phone<input className="form-control" type="tel" name="phone" autoComplete="tel" value={isEditing ? editData.phone : profile.phone || ''} onChange={handleInputChange} readOnly={!isEditing} maxLength={50} placeholder="Not provided" disabled={saveLoading}/></label></div>{isEditing && <div className="employee-profile-actions"><button className="btn btn-outline-primary" type="button" onClick={() => setIsEditing(false)} disabled={saveLoading}>Cancel</button><button className="btn btn-primary" type="submit" disabled={saveLoading}>{saveLoading ? 'Saving…' : 'Save Changes'}</button></div>}</form></div></section>

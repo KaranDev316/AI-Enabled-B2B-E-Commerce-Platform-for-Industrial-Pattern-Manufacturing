@@ -5,6 +5,11 @@ const API = import.meta.env.VITE_API_BASE_URL || '/api';
 
 export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) {
   const [data, setData] = useState({ rfqs: [], tickets: [], orders: [] });
+  const [stock, setStock] = useState(null);
+  const [stockError, setStockError] = useState('');
+  async function loadStock() {try {const r=await fetch(`${API}/admin/inventory/summary`, {credentials:'same-origin'});if(!r.ok) throw Error();setStock(await r.json());setStockError('');}catch {setStockError('Stock records unavailable');}}
+  useKpcLiveSync(loadStock, 5000);
+  useEffect(() => {loadStock();}, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const requestRef = useRef(null);
@@ -42,7 +47,7 @@ export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) 
     <section className="admin-summary-grid" aria-label="Operations overview">
       <button className="admin-summary-card" onClick={() => onNavigate('rfqs')}><span className="admin-summary-icon"><Icon name="rfqs" size={27}/></span><div><span>Pending RFQs</span><strong>{loading || error ? '—' : pending.length}</strong><small>Requests awaiting a quotation</small></div></button>
       <button className="admin-summary-card" onClick={() => onNavigate('orders')}><span className="admin-summary-icon orange"><Icon name="orders" size={27}/></span><div><span>Active Orders</span><strong>{loading || error ? '—' : data.orders.filter(o => o.status !== 'cancelled').length}</strong><small>Accepted orders awaiting settlement or confirmed</small></div></button>
-      <button className="admin-summary-card admin-stock-card" onClick={() => onNavigate('inventory')}><span className="admin-summary-icon red"><Icon name="company" size={27}/></span><div><span>Low Stock Alerts</span><strong>—</strong><small>Stock monitoring is not available yet</small></div></button>
+      <button className="admin-summary-card admin-stock-card" onClick={() => onNavigate('inventory')}><span className="admin-summary-icon red"><Icon name="company" size={27}/></span><div><span>Low Stock Alerts</span><strong>{!stock || stockError ? '—' : stock.low_stock + stock.out_of_stock}</strong><small>{stockError || (!stock ? 'Loading stock records…' : `${stock.low_stock} low · ${stock.out_of_stock} out of stock`)}</small></div></button>
     </section>
     <div className="admin-dashboard-grid">
       <section className="card admin-pending"><div className="customer-section-header"><h2>Pending RFQs</h2><button className="customer-text-link" onClick={() => onNavigate('rfqs')}>View all RFQs ›</button></div><div className="table-responsive"><table className="table mb-0"><thead><tr><th>RFQ ID</th><th>CUSTOMER</th><th>PRODUCT / REQUEST</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{loading || error || !queue.length ? <tr><td colSpan="5" className="admin-table-empty" role={loading ? 'status' : undefined}>{empty}</td></tr> : queue.slice(0, 4).map(rfq => <tr key={rfq.id}><td><strong>{rfq.rfq_number}</strong></td><td>{rfq.customer_company || rfq.customer_email || 'Not provided'}</td><td>{rfq.title}</td><td><span className={`customer-status status-${rfq.status}`}>{rfq.status.replaceAll('_', ' ')}</span></td><td><button className={`btn btn-sm ${rfq.status === 'submitted' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => onOpenRfq(rfq)}>{rfq.status === 'submitted' ? 'Review' : 'Open'}</button></td></tr>)}</tbody></table></div></section>
