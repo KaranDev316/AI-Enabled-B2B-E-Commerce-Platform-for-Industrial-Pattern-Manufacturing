@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CustomerIcon as Icon } from './CustomerLayout';
 import { useKpcLiveSync, LiveSyncBadge } from '../utils/kpcLiveSync.jsx';
 const API = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -7,25 +7,30 @@ export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) 
   const [data, setData] = useState({ rfqs: [], tickets: [], orders: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [retry, setRetry] = useState(0);
-
-  const { isLiveSynced } = useKpcLiveSync(() => {
-    setRetry(v => v + 1);
-  }, 4000);
-  useEffect(() => {
+  const requestRef = useRef(null);
+  const load = useCallback(async (options = {}) => {
+    if (requestRef.current) return;
     const controller = new AbortController();
-    setLoading(true); setError('');
-    async function load() {
-      try {
-        const responses = await Promise.all(['/admin/rfqs', '/admin/support/tickets', '/orders'].map(path => fetch(`${API}${path}`, { credentials: 'same-origin', signal: controller.signal })));
-        if (responses.some(r => !r.ok)) throw new Error('Unable to load the dashboard. Please try again.');
-        const [rfqs, tickets, orders] = await Promise.all(responses.map(r => r.json()));
-        if (!controller.signal.aborted) setData({ rfqs, tickets, orders });
-      } catch (err) { if (!controller.signal.aborted) setError('Unable to load the dashboard. Please try again.'); }
-      finally { if (!controller.signal.aborted) setLoading(false); }
+    requestRef.current = controller;
+    const quiet = options.quiet === true;
+    if (!quiet) { setLoading(true); setError(''); }
+    try {
+      const responses = await Promise.all(['/admin/rfqs', '/admin/support/tickets', '/orders'].map(path => fetch(`${API}${path}`, { credentials: 'same-origin', signal: controller.signal })));
+      if (responses.some(r => !r.ok)) throw new Error('Unable to load the dashboard. Please try again.');
+      const [rfqs, tickets, orders] = await Promise.all(responses.map(r => r.json()));
+      if (!controller.signal.aborted) { setData({ rfqs, tickets, orders }); setError(''); }
+    } catch (err) {
+      if (!controller.signal.aborted && !quiet) setError('Unable to load the dashboard. Please try again.');
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+      if (!controller.signal.aborted && !quiet) setLoading(false);
     }
-    load(); return () => controller.abort();
-  }, [retry]);
+  }, []);
+  const { isLiveSynced } = useKpcLiveSync(() => load({ quiet: true }), 4000);
+  useEffect(() => {
+    load();
+    return () => { requestRef.current?.abort(); requestRef.current = null; };
+  }, [load]);
   const pending = data.rfqs.filter(r => ['submitted', 'under_review'].includes(r.status));
   const query = search.trim().toLowerCase();
   const queue = [...pending].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).filter(r => `${r.rfq_number} ${r.title} ${r.customer_company || ''} ${r.customer_email || ''}`.toLowerCase().includes(query));
@@ -33,7 +38,7 @@ export function AdminDashboard({ onNavigate, onOpenRfq, onOpenTicket, search }) 
   const tickets = [...data.tickets].filter(t => ['open', 'in_progress'].includes(t.status) && `${t.subject} ${t.ticket_number} ${t.customer_name || ''}`.toLowerCase().includes(query)).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
   const empty = loading ? 'Loading dashboard records…' : error ? 'Records are unavailable.' : query ? 'No matching records.' : 'No pending RFQs. New customer requests will appear here.';
   return <div className="admin-dashboard">
-    {error && <div className="alert alert-danger" role="alert">{error} <button className="btn btn-sm btn-outline-danger" onClick={() => setRetry(value => value + 1)}>Try again</button></div>}
+    {error && <div className="alert alert-danger" role="alert">{error} <button className="btn btn-sm btn-outline-danger" onClick={() => load()}>Try again</button></div>}
     <section className="admin-summary-grid" aria-label="Operations overview">
       <button className="admin-summary-card" onClick={() => onNavigate('rfqs')}><span className="admin-summary-icon"><Icon name="rfqs" size={27}/></span><div><span>Pending RFQs</span><strong>{loading || error ? '—' : pending.length}</strong><small>Requests awaiting a quotation</small></div></button>
       <button className="admin-summary-card" onClick={() => onNavigate('orders')}><span className="admin-summary-icon orange"><Icon name="orders" size={27}/></span><div><span>Active Orders</span><strong>{loading || error ? '—' : data.orders.filter(o => o.status !== 'cancelled').length}</strong><small>Accepted orders awaiting settlement or confirmed</small></div></button>

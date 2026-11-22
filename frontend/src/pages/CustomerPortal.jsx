@@ -47,10 +47,8 @@ export function CustomerPortal() {
   const [catalogueProducts, setCatalogueProducts] = useState([]);
 
   // Cross-Tab Real-Time Sync & Live Badge
-  const { isLiveUpdated } = useCrossTabSync((event) => {
-    fetchMyRfqs();
-    fetchSupportTickets();
-    fetchCustomerContext();
+  const { isLiveUpdated } = useCrossTabSync(async () => {
+    await Promise.all([fetchMyRfqs({ quiet: true }), fetchSupportTickets({ quiet: true }), fetchCustomerContext()]);
   }, 4000);
 
   const location = useLocation();
@@ -139,19 +137,21 @@ export function CustomerPortal() {
     setIsRfqModalOpen(true);
   }
 
-  async function fetchMyRfqs() {
-    setLoadingRfqs(true);
-    setRfqError('');
+  async function fetchMyRfqs(options = {}) {
+    const quiet = options.quiet === true;
+    if (!quiet) setLoadingRfqs(true);
+    if (!quiet) setRfqError('');
     try {
       const res = await fetch(`${API_BASE}/rfqs/my`, { credentials: 'same-origin' });
       if (res.ok) {
         const data = await res.json();
         setMyRfqs(data);
+        setRfqError('');
       } else { throw new Error('Unable to load your requests. Please try again.'); }
     } catch (err) {
-      setRfqError('Unable to load your requests. Please try again.');
+      if (!quiet) setRfqError('Unable to load your requests. Please try again.');
     } finally {
-      setLoadingRfqs(false);
+      if (!quiet) setLoadingRfqs(false);
     }
   }
 
@@ -167,19 +167,21 @@ export function CustomerPortal() {
     }
   }
 
-  async function fetchSupportTickets() {
-    setLoadingTickets(true);
-    setSupportError('');
+  async function fetchSupportTickets(options = {}) {
+    const quiet = options.quiet === true;
+    if (!quiet) setLoadingTickets(true);
+    if (!quiet) setSupportError('');
     try {
       const res = await fetch(`${API_BASE}/support/tickets/my`, { credentials: 'same-origin' });
       if (res.ok) {
         const data = await res.json();
         setSupportTickets(data);
+        setSupportError('');
       } else { throw new Error('Unable to load your support tickets.'); }
     } catch (err) {
-      setSupportError('Unable to load your support tickets. Please try again.');
+      if (!quiet) setSupportError('Unable to load your support tickets. Please try again.');
     } finally {
-      setLoadingTickets(false);
+      if (!quiet) setLoadingTickets(false);
     }
   }
 

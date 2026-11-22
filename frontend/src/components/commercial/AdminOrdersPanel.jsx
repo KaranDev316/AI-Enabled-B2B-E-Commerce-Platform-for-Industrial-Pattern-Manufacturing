@@ -26,9 +26,9 @@ export default function AdminOrdersPanel() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const loadOrders = useCallback(async (options = {}) => {
+    const quiet = options.quiet === true;
+    if (!quiet) { setLoading(true); setError(''); }
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
@@ -42,24 +42,24 @@ export default function AdminOrdersPanel() {
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
       setOrders(list);
-      if (list.length > 0 && !selectedId) {
-        setSelectedId(list[0].id);
-      }
+      setError('');
+      if (list.length > 0) setSelectedId(current => current ?? list[0].id);
     } catch (err) {
-      setError(err.message || 'Unable to load orders.');
+      if (!quiet) setError(err.message || 'Unable to load orders.');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
-  }, [search, statusFilter, selectedId]);
+  }, [search, statusFilter]);
 
   const { isLiveSynced } = useKpcLiveSync(async () => {
-    await loadOrders();
+    await loadOrders({ quiet: true });
     if (!selectedId) return;
     try {
       const response = await fetch(`/api/orders/${selectedId}`);
       if (!response.ok) throw new Error('Unable to refresh order details.');
-      setDetail(await response.json());
-    } catch (err) { setError(err.message); }
+      const next = await response.json();
+      setDetail(current => current?.id === next.id ? next : current);
+    } catch (err) { console.warn('Order background refresh failed:', err); }
   }, 4000);
 
 

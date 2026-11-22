@@ -27,10 +27,10 @@ export function AdminPortal() {
   }
 
   // Cross-Tab Real-Time Sync & Live Badge
-  const { isLiveUpdated } = useCrossTabSync(() => {
-    if (activeTab === 'users') fetchUsers();
-    else if (activeTab === 'rfqs') fetchRfqs();
-    else if (activeTab === 'support') fetchAdminTickets();
+  const { isLiveUpdated } = useCrossTabSync(async () => {
+    if (activeTab === 'users') await fetchUsers({ quiet: true });
+    else if (activeTab === 'rfqs') await fetchRfqs({ quiet: true });
+    else if (activeTab === 'support') await fetchAdminTickets({ quiet: true });
   }, 4000);
 
   // Users State (S02)
@@ -104,8 +104,9 @@ export function AdminPortal() {
     }
   }, [activeTab, roleFilter, rfqStatusFilter, rfqTypeFilter, adminTicketFilter, adminTicketTypeFilter]);
 
-  async function fetchAdminTickets() {
-    setLoadingAdminTickets(true);
+  async function fetchAdminTickets(options = {}) {
+    const quiet = options.quiet === true;
+    if (!quiet) setLoadingAdminTickets(true);
     try {
       const params = new URLSearchParams();
       if (adminTicketFilter !== 'all') params.append('status', adminTicketFilter);
@@ -120,7 +121,7 @@ export function AdminPortal() {
     } catch (err) {
       console.error('Failed to load admin support tickets:', err);
     } finally {
-      setLoadingAdminTickets(false);
+      if (!quiet) setLoadingAdminTickets(false);
     }
   }
 
@@ -205,8 +206,9 @@ export function AdminPortal() {
     }
   }
 
-  async function fetchUsers() {
-    setLoadingUsers(true);
+  async function fetchUsers(options = {}) {
+    const quiet = options.quiet === true;
+    if (!quiet) setLoadingUsers(true);
     try {
       let url = `${API_BASE}/admin/users`;
       const params = new URLSearchParams();
@@ -219,14 +221,15 @@ export function AdminPortal() {
       const data = await res.json();
       setUsers(data);
     } catch (err) {
-      setFeedback({ error: err.message, success: '' });
+      if (!quiet) setFeedback({ error: err.message, success: '' });
     } finally {
-      setLoadingUsers(false);
+      if (!quiet) setLoadingUsers(false);
     }
   }
 
-  async function fetchRfqs() {
-    setLoadingRfqs(true);
+  async function fetchRfqs(options = {}) {
+    const quiet = options.quiet === true;
+    if (!quiet) setLoadingRfqs(true);
     try {
       let url = `${API_BASE}/admin/rfqs`;
       const params = new URLSearchParams();
@@ -240,9 +243,9 @@ export function AdminPortal() {
       const data = await res.json();
       setRfqs(data);
     } catch (err) {
-      setFeedback({ error: err.message, success: '' });
+      if (!quiet) setFeedback({ error: err.message, success: '' });
     } finally {
-      setLoadingRfqs(false);
+      if (!quiet) setLoadingRfqs(false);
     }
   }
 

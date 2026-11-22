@@ -26,9 +26,9 @@ export default function CustomerInvoicesPanel() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
 
-  const loadInvoices = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const loadInvoices = useCallback(async (options = {}) => {
+    const quiet = options.quiet === true;
+    if (!quiet) { setLoading(true); setError(''); }
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
@@ -41,10 +41,11 @@ export default function CustomerInvoicesPanel() {
       }
       const data = await res.json();
       setInvoices(Array.isArray(data) ? data : []);
+      setError('');
     } catch (err) {
-      setError(err.message || 'Unable to load invoices.');
+      if (!quiet) setError(err.message || 'Unable to load invoices.');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [search, statusFilter]);
 
@@ -57,23 +58,24 @@ export default function CustomerInvoicesPanel() {
 
   const openInvoiceDetail = async (invoiceId, quiet = false) => {
     if (!quiet) setDetailLoading(true);
-    setDetailError('');
+    if (!quiet) setDetailError('');
     try {
       const res = await fetch(`/api/invoices/${invoiceId}`, { credentials: 'include' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.detail?.message || 'Unable to load invoice details.');
       }
-      setSelectedInvoice(await res.json());
+      const next = await res.json();
+      setSelectedInvoice(current => quiet && current?.id !== invoiceId ? current : next);
     } catch (err) {
-      setDetailError(err.message || 'Unable to load invoice details.');
+      if (!quiet) setDetailError(err.message || 'Unable to load invoice details.');
     } finally {
-      setDetailLoading(false);
+      if (!quiet) setDetailLoading(false);
     }
   };
 
   const { isLiveSynced } = useKpcLiveSync(async () => {
-    await loadInvoices();
+    await loadInvoices({ quiet: true });
     if (selectedInvoice) await openInvoiceDetail(selectedInvoice.id, true);
   }, 4000);
 
@@ -322,7 +324,7 @@ export default function CustomerInvoicesPanel() {
                     <PaymentHistory payments={selectedInvoice.payments} />
                     <DemoPaymentForm key={selectedInvoice.id} invoice={selectedInvoice} onRecorded={async () => {
                       await openInvoiceDetail(selectedInvoice.id, true);
-                      await loadInvoices();
+                      await loadInvoices({ quiet: true });
                     }} />
                   </>
                 ) : null}

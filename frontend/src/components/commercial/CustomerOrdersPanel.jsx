@@ -33,9 +33,9 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
   const [cancelError, setCancelError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
-  const loadOrders = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const loadOrders = useCallback(async (options = {}) => {
+    const quiet = options.quiet === true;
+    if (!quiet) { setLoading(true); setError(''); }
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
@@ -48,10 +48,11 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
       }
       const data = await res.json();
       setOrders(Array.isArray(data) ? data : []);
+      setError('');
     } catch (err) {
-      setError(err.message || 'Unable to load orders.');
+      if (!quiet) setError(err.message || 'Unable to load orders.');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [search, statusFilter]);
 
@@ -61,26 +62,26 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
   }, [loadOrders]);
 
   const openOrderDetail = useCallback(async (orderId, quiet = false) => {
-    setSelectedOrderId(orderId);
+    if (!quiet) setSelectedOrderId(orderId);
     if (!quiet) setDetailLoading(true);
-    setDetailError('');
+    if (!quiet) setDetailError('');
     try {
       const res = await fetch(`/api/orders/${orderId}`, { credentials: 'include' });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.detail?.message || 'Unable to load order details.');
       }
-      setOrderDetail(await res.json());
+      const next = await res.json();
+      setOrderDetail(current => quiet && current?.id !== orderId ? current : next);
     } catch (err) {
-      setDetailError(err.message || 'Unable to load order details.');
-      setOrderDetail(null);
+      if (!quiet) { setDetailError(err.message || 'Unable to load order details.'); setOrderDetail(null); }
     } finally {
-      setDetailLoading(false);
+      if (!quiet) setDetailLoading(false);
     }
   }, []);
 
   const { isLiveSynced } = useKpcLiveSync(async () => {
-    await loadOrders();
+    await loadOrders({ quiet: true });
     if (selectedOrderId) await openOrderDetail(selectedOrderId, true);
   }, 4000);
 
@@ -106,7 +107,7 @@ export default function CustomerOrdersPanel({ csrfToken, onNewRfq, onOpenInvoice
       setToastMessage(body?.message || 'Unpaid order cancelled.');
       setCancelTarget(null);
       setCancelReason('');
-      await loadOrders();
+      await loadOrders({ quiet: true });
       emitKpcSync('ORDER_CANCELLED', { order_id: cancelTarget.id });
       if (selectedOrderId === cancelTarget.id) {
         setOrderDetail(body.order);

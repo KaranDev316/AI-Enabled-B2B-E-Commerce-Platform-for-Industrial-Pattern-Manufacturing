@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PublicHeader } from '../components/PublicHeader';
 import { demoProducts, productPrice } from '../data/catalogue';
@@ -52,11 +52,27 @@ export function CataloguePage() {
   const suffix = preview ? '?preview=1' : '';
   const [products, setProducts] = useState([]);
   const [status, setStatus] = useState('loading');
-  const [retry, setRetry] = useState(0);
-
-  const { isLiveSynced } = useKpcLiveSync(() => {
-    setRetry(v => v + 1);
-  }, 4000);
+  const requestRef = useRef(null);
+  const loadProducts = useCallback(async (options = {}) => {
+    if (requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const quiet = options.quiet === true;
+    if (!quiet) setStatus('loading');
+    try {
+      if (preview) { setProducts(demoProducts); setStatus('ready'); return; }
+      const response = await fetch(`${API}/products`, { signal: controller.signal });
+      if (!response.ok) throw new Error('Unable to load products.');
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('Invalid product response.');
+      if (!controller.signal.aborted) { setProducts(data); setStatus('ready'); }
+    } catch (err) {
+      if (!controller.signal.aborted && !quiet) setStatus('error');
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  }, [preview]);
+  const { isLiveSynced } = useKpcLiveSync(() => loadProducts({ quiet: true }), 4000);
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState([]);
   const [materials, setMaterials] = useState([]);
@@ -76,12 +92,9 @@ export function CataloguePage() {
     };
   }, [selectedProduct]);
   useEffect(() => {
-    const controller = new AbortController();
-    setStatus('loading');
-    if (preview) { setProducts(demoProducts); setStatus('ready'); return () => controller.abort(); }
-    fetch(`${API}/products`, { signal: controller.signal }).then(r => { if (!r.ok) throw Error(); return r.json(); }).then(data => { if (!Array.isArray(data)) throw Error(); setProducts(data); setStatus('ready'); }).catch(e => { if (e.name !== 'AbortError') setStatus('error'); });
-    return () => controller.abort();
-  }, [preview, retry]);
+    loadProducts();
+    return () => { requestRef.current?.abort(); requestRef.current = null; };
+  }, [loadProducts]);
   useEffect(() => { if (productId) window.scrollTo(0, 0); }, [productId]);
   const reset = () => { setSearch(''); setCategories([]); setMaterials([]); setPage(1); };
   const toggle = (value, values, setter) => { setter(values.includes(value) ? values.filter(v => v !== value) : [...values, value]); setPage(1); };
@@ -89,7 +102,7 @@ export function CataloguePage() {
   const materialOptions = [...new Set(products.map(p => p.material_type).filter(Boolean))];
   const filtered = products.filter(p => (!search || `${p.name} ${p.description || ''}`.toLowerCase().includes(search.toLowerCase())) && (!categories.length || categories.includes(p.category_name)) && (!materials.length || materials.includes(p.material_type))).sort((a,b) => sort === 'price' ? (a.indicative_price ?? Infinity) - (b.indicative_price ?? Infinity) : a.name.localeCompare(b.name));
   const product = products.find(p => (String(p.id) === productId || p.slug === productId));
-  const stateView = status === 'loading' ? <div className="catalogue-state" role="status">Loading patterns…</div> : status === 'error' ? <div className="catalogue-state" role="alert"><h2>Unable to load the catalogue</h2><p>Please try again when the service is available.</p><button className="public-button public-button-outline" onClick={() => setRetry(retry+1)}>Try again</button></div> : null;
+  const stateView = status === 'loading' ? <div className="catalogue-state" role="status">Loading patterns…</div> : status === 'error' ? <div className="catalogue-state" role="alert"><h2>Unable to load the catalogue</h2><p>Please try again when the service is available.</p><button className="public-button public-button-outline" onClick={() => loadProducts()}>Try again</button></div> : null;
   return <div className="kpc-public catalogue-page"><PublicHeader />{preview && <div className="catalogue-preview">Design preview — sample products, images, prices, and specifications. <Link to="/products">View live catalogue</Link></div>}
     {!productId && <section className="catalogue-banner"><h1>Industrial Pattern Catalogue</h1><p>Browse our range of wooden and metallic patterns.</p><div><Link to="/">Home</Link><span>›</span>Products</div></section>}
     <main className="public-container catalogue-main">{stateView || (productId ? product ? <>

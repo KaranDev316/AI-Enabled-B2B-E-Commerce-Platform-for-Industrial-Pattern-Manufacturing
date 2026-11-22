@@ -26,9 +26,9 @@ export default function AdminInvoicesPanel() {
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const loadInvoices = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const loadInvoices = useCallback(async (options = {}) => {
+    const quiet = options.quiet === true;
+    if (!quiet) { setLoading(true); setError(''); }
     try {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
@@ -42,25 +42,25 @@ export default function AdminInvoicesPanel() {
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
       setInvoices(list);
-      if (list.length > 0 && !selectedId) {
-        setSelectedId(list[0].id);
-      }
+      setError('');
+      if (list.length > 0) setSelectedId(current => current ?? list[0].id);
     } catch (err) {
-      setError(err.message || 'Unable to load invoices.');
+      if (!quiet) setError(err.message || 'Unable to load invoices.');
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
-  }, [search, statusFilter, selectedId]);
+  }, [search, statusFilter]);
 
   async function refreshDetail() {
     if (!selectedId) return;
     const response = await fetch(`/api/invoices/${selectedId}`);
     if (!response.ok) throw new Error('Unable to refresh invoice details.');
-    setDetail(await response.json());
+    const next = await response.json();
+    setDetail(current => current?.id === next.id ? next : current);
   }
   const { isLiveSynced } = useKpcLiveSync(async () => {
-    await loadInvoices();
-    try { await refreshDetail(); } catch (err) { setError(err.message); }
+    await loadInvoices({ quiet: true });
+    try { await refreshDetail(); } catch (err) { console.warn('Invoice background refresh failed:', err); }
   }, 4000);
 
 
@@ -309,7 +309,7 @@ export default function AdminInvoicesPanel() {
                 <PaymentHistory payments={detail.payments} />
                 <DemoPaymentForm key={detail.id} invoice={detail} onRecorded={async () => {
                   await refreshDetail();
-                  await loadInvoices();
+                  await loadInvoices({ quiet: true });
                 }} />
               </>
             )}

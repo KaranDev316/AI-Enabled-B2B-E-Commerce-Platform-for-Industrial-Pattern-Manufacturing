@@ -71,12 +71,15 @@ export function useKpcLiveSync(onRefresh, pollMs = 4000) {
   const [isLiveSynced, setIsLiveSynced] = useState(false);
   const onRefreshRef = useRef(onRefresh);
   const badgeTimerRef = useRef(null);
+  const refreshInFlightRef = useRef(false);
 
   useEffect(() => {
     onRefreshRef.current = onRefresh;
   }, [onRefresh]);
 
-  const handleSyncTrigger = useCallback((syncPacket, showBadge = true) => {
+  const handleSyncTrigger = useCallback(async (syncPacket, showBadge = true) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
     setLastSync(syncPacket || { eventType: 'POLL', timestamp: Date.now() });
 
     if (showBadge) {
@@ -89,11 +92,12 @@ export function useKpcLiveSync(onRefresh, pollMs = 4000) {
 
     if (typeof onRefreshRef.current === 'function') {
       try {
-        onRefreshRef.current(syncPacket);
+        await onRefreshRef.current(syncPacket);
       } catch (err) {
         console.error('[kpcLiveSync] onRefresh callback error:', err);
       }
     }
+    refreshInFlightRef.current = false;
   }, []);
 
   useEffect(() => {
