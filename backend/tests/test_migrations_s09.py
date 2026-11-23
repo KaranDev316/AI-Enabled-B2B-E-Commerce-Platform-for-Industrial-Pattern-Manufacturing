@@ -6,12 +6,12 @@ import sys
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, func, inspect, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from app.models import User
-from app.models_commercial import CommercialInvoice
+from app.models import Order, User
+from app.models_commercial import CommercialInvoice, OrderCommercialSnapshot, OrderStatusEvent, SimulatedPayment
 from app.schemas.commercial import SimulatedPaymentRequest
 from app.services.commercial_service import create_order_and_invoice_atomic
 from app.services.payment_service import record_simulated_payment
@@ -38,10 +38,10 @@ def test_s09_upgrade_preserves_invoice_and_enforces_payment_constraints():
         with Session(engine) as db:
             user = User(email='migration@s09.test', password_hash='fixture-only', role='customer', is_active=True)
             db.add(user); db.flush()
-            _, _, invoice = create_order_and_invoice_atomic(db, customer_id=user.id, customer_name='Retained Foundry',
+            order, _, invoice = create_order_and_invoice_atomic(db, customer_id=user.id, customer_name='Retained Foundry',
                 product_summary='Retained pattern', items=[{'description':'Retained tooling', 'quantity':1, 'unit_price':'100.00'}], tax_rate_percent=0)
             db.commit()
-            invoice_id, user_id, snapshot = invoice.id, user.id, invoice.items_snapshot_json
+            order_id, invoice_id, user_id, snapshot = order.id, invoice.id, user.id, invoice.items_snapshot_json
         upgrade('008')
         upgrade('head')
         with Session(engine) as db:
@@ -53,9 +53,29 @@ def test_s09_upgrade_preserves_invoice_and_enforces_payment_constraints():
             checks = {item['name'] for item in info.get_check_constraints('simulated_payments')}
             assert {'ck_simulated_payment_positive', 'ck_simulated_payment_outcome'} <= checks
             assert {fk['referred_table'] for fk in info.get_foreign_keys('simulated_payments')} == {'users', 'invoices'}
-            result = record_simulated_payment(db, invoice_id, db.get(User, user_id), SimulatedPaymentRequest(amount='100', idempotency_key=uuid4()))
+            failed_payload = SimulatedPaymentRequest(amount='10', outcome='failed', idempotency_key=uuid4())
+            failed = record_simulated_payment(db, invoice_id, db.get(User, user_id), failed_payload)
+            paid_payload = SimulatedPaymentRequest(amount='100', idempotency_key=uuid4())
+            result = record_simulated_payment(db, invoice_id, db.get(User, user_id), paid_payload)
             assert result.outcome == 'succeeded'
             assert db.get(CommercialInvoice, invoice_id).items_snapshot_json == snapshot
+        # New connections after a repeated migration must retain both outcomes and
+        # return the original attempts, without another ledger row/confirmation.
+        engine.dispose()
+        upgrade('head')
+        with Session(engine) as db:
+            assert record_simulated_payment(db, invoice_id, db.get(User, user_id), failed_payload) == failed
+            assert record_simulated_payment(db, invoice_id, db.get(User, user_id), paid_payload) == result
+            invoice = db.get(CommercialInvoice, invoice_id)
+            assert invoice.items_snapshot_json == snapshot
+            assert invoice.paid_amount == 100 and invoice.status == 'paid'
+            assert db.get(Order, order_id).status == 'confirmed'
+            assert db.scalar(select(func.count()).select_from(SimulatedPayment)) == 2
+            assert db.scalar(select(func.count()).select_from(OrderStatusEvent).where(
+                OrderStatusEvent.order_id == order_id,
+                OrderStatusEvent.event_type == 'order_confirmed')) == 1
+            retained = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.order_id == order_id))
+            assert retained.paid_amount == 100 and retained.successful_payment_count == 1
     finally:
         engine.dispose()
         with root.begin() as conn:
