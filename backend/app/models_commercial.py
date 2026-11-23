@@ -33,7 +33,7 @@ class OrderCommercialSnapshot(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey('orders.id', ondelete='CASCADE'), unique=True, index=True, nullable=False
+        Integer, ForeignKey('orders.id', ondelete='RESTRICT'), unique=True, index=True, nullable=False
     )
     quotation_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('quotations.id'), unique=True, index=True, nullable=True)
     quotation_version: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -81,10 +81,10 @@ class CommercialInvoice(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     invoice_number: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     order_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey('orders.id', ondelete='CASCADE'), unique=True, index=True, nullable=False
+        Integer, ForeignKey('orders.id', ondelete='RESTRICT'), unique=True, index=True, nullable=False
     )
     customer_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey('users.id', ondelete='CASCADE'), index=True, nullable=False
+        Integer, ForeignKey('users.id', ondelete='RESTRICT'), index=True, nullable=False
     )
 
     # Immutable snapshot fields
@@ -121,7 +121,7 @@ class OrderStatusEvent(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     order_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey('orders.id', ondelete='CASCADE'), index=True, nullable=False
+        Integer, ForeignKey('orders.id', ondelete='RESTRICT'), index=True, nullable=False
     )
     actor_user_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True

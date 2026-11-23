@@ -19,6 +19,7 @@ export default function CustomerInvoicesPanel() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [staleWarning, setStaleWarning] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -42,8 +43,9 @@ export default function CustomerInvoicesPanel() {
       const data = await res.json();
       setInvoices(Array.isArray(data) ? data : []);
       setError('');
+      setStaleWarning(false);
     } catch (err) {
-      if (!quiet) setError(err.message || 'Unable to load invoices.');
+      if (!quiet) setError(err.message || 'Unable to load invoices.'); else setStaleWarning(true);
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -97,6 +99,12 @@ export default function CustomerInvoicesPanel() {
       <div className="kpc-commercial-demo-banner">
         View your invoices, track payments, and settle outstanding balances.
       </div>
+
+      {staleWarning && !error && (
+
+        <div className="alert alert-warning" role="status">Latest updates could not be loaded. The records shown may be out of date; they will refresh automatically when the connection recovers.</div>
+
+      )}
 
       <div className="kpc-commercial-kpi-grid cols-3">
         <div className="kpc-commercial-kpi tone-danger">

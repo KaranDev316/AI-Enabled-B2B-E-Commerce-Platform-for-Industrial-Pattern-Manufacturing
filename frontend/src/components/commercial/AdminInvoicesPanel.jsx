@@ -19,6 +19,7 @@ export default function AdminInvoicesPanel() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [staleWarning, setStaleWarning] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -43,9 +44,10 @@ export default function AdminInvoicesPanel() {
       const list = Array.isArray(data) ? data : [];
       setInvoices(list);
       setError('');
+      setStaleWarning(false);
       if (list.length > 0) setSelectedId(current => current ?? list[0].id);
     } catch (err) {
-      if (!quiet) setError(err.message || 'Unable to load invoices.');
+      if (!quiet) setError(err.message || 'Unable to load invoices.'); else setStaleWarning(true);
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -104,6 +106,9 @@ export default function AdminInvoicesPanel() {
     <section className="kpc-commercial-panel" aria-label="Admin Invoices and Payments">
 
 
+      {staleWarning && !error && (
+        <div className="alert alert-warning" role="status">Latest updates could not be loaded. The records shown may be out of date; they will refresh automatically when the connection recovers.</div>
+      )}
       <div className="kpc-commercial-kpi-grid">
         <div className="kpc-commercial-kpi">
           <span>Total Invoiced (Active)</span>

@@ -19,6 +19,7 @@ export default function AdminOrdersPanel() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [staleWarning, setStaleWarning] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -43,9 +44,10 @@ export default function AdminOrdersPanel() {
       const list = Array.isArray(data) ? data : [];
       setOrders(list);
       setError('');
+      setStaleWarning(false);
       if (list.length > 0) setSelectedId(current => current ?? list[0].id);
     } catch (err) {
-      if (!quiet) setError(err.message || 'Unable to load orders.');
+      if (!quiet) setError(err.message || 'Unable to load orders.'); else setStaleWarning(true);
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -102,11 +104,14 @@ export default function AdminOrdersPanel() {
     <section className="kpc-commercial-panel" aria-label="Admin Orders and Production">
 
 
+      {staleWarning && !error && (
+        <div className="alert alert-warning" role="status">Latest updates could not be loaded. The records shown may be out of date; they will refresh automatically when the connection recovers.</div>
+      )}
       <div className="kpc-commercial-kpi-grid">
         <div className="kpc-commercial-kpi">
           <span>Total Orders</span>
           <strong>{kpis.total}</strong>
-          <small>All customer orders</small>
+          <small>{statusFilter !== 'all' || search.trim() ? 'Matching current filters' : 'All customer orders'}</small>
         </div>
         <div className="kpc-commercial-kpi tone-warn">
           <span>Awaiting Payment</span>

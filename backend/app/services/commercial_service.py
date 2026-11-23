@@ -435,10 +435,8 @@ def cancel_unpaid_order(
         )
 
     if order.status == OrderCommercialStatus.CANCELLED.value:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={'code': 'ORDER_ALREADY_CANCELLED', 'message': 'This order is already cancelled.'},
-        )
+        # Idempotent retry (e.g. after a lost response): return the saved cancelled state.
+        return get_order_detail_for_user(db, order.id, customer_user)
 
     snapshot = db.scalar(select(OrderCommercialSnapshot).where(OrderCommercialSnapshot.order_id == order.id).execution_options(populate_existing=True))
     if snapshot is None:

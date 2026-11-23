@@ -47,7 +47,7 @@ def test_s09_upgrade_preserves_invoice_and_enforces_payment_constraints():
         with Session(engine) as db:
             invoice = db.get(CommercialInvoice, invoice_id)
             assert invoice.items_snapshot_json == snapshot and invoice.total_amount == 100 and invoice.paid_amount == 0
-            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '008'
+            assert db.scalar(text('SELECT version_num FROM alembic_version')) == '009'
             info = inspect(db.connection())
             assert any(item['column_names'] == ['idempotency_key'] for item in info.get_unique_constraints('simulated_payments'))
             checks = {item['name'] for item in info.get_check_constraints('simulated_payments')}

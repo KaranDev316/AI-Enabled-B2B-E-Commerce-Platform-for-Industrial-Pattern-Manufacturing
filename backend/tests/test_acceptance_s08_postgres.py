@@ -93,7 +93,7 @@ def test_duplicate_cancellation_has_one_history_event(pg_engine):
             except HTTPException as exc:
                 return exc.status_code
     with ThreadPoolExecutor(max_workers=2) as pool:
-        assert sorted(pool.map(attempt,range(2)))==[200,409]
+        assert sorted(pool.map(attempt,range(2)))==[200,200]  # retry returns saved state
     with Session(pg_engine) as db:
         assert db.get(Order,ids['order_id']).status=='cancelled'
         assert db.get(CommercialInvoice,ids['invoice_id']).status=='cancelled'

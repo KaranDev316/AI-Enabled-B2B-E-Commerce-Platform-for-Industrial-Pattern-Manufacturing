@@ -255,14 +255,16 @@ def test_cancel_unpaid_order_preserves_history_and_blocks_paid_orders(s08_client
     assert payload['invoice']['status'] == InvoiceStatus.CANCELLED.value
     assert [ev['event_type'] for ev in payload['status_history']] == ['order_created', 'order_cancelled']
 
-    # Repeating cancellation returns 409
+    # Repeating cancellation (e.g. retry after a lost response) returns the saved state
     r_repeat = s08_client.post(
         f'/api/orders/{unpaid_order.id}/cancel',
         json={'reason': 'Second cancel'},
         headers={'Origin': ORIGIN, 'X-CSRF-Token': csrf_c1},
     )
-    assert r_repeat.status_code == 409
-    assert r_repeat.json()['detail']['code'] == 'ORDER_ALREADY_CANCELLED'
+    assert r_repeat.status_code == 200, r_repeat.text
+    repeat = r_repeat.json()['order']
+    assert repeat['cancellation_reason'] == 'Project schedule postponed'
+    assert [ev['event_type'] for ev in repeat['status_history']] == ['order_created', 'order_cancelled']
 
     # Controlled fixture: partially paid order CANNOT be cancelled (REQ-21 / AC-06-07)
     paid_order, paid_snap, paid_inv = _seed_order_and_invoice(db_session, u_c1)
