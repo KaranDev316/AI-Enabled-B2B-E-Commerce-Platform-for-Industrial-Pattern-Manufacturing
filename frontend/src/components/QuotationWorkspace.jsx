@@ -30,6 +30,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
   const [success, setSuccess] = useState('');
   const [form, setForm] = useState(blank);
   const [dirty, setDirty] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [acceptedOrder, setAcceptedOrder] = useState(null);
   const [decision, setDecision] = useState('');
   const [message, setMessage] = useState('');
@@ -46,28 +47,37 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
     if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Check the quotation fields and try again.');
     return data;
   }
-  async function load(id) {
-    setLoading(true); setError('');
+  async function load(id, { keepError = false } = {}) {
+    setLoading(true); if (!keepError) setError('');
     try {
       const records = await request(`${prefix}/rfqs/${rfq.id}/quotations`);
-      setQuotes(records);
+      setQuotes(records); setLoaded(true);
       const selected = records.find(q => q.id === id) || records[0];
       setSelectedId(selected?.id ?? null); setForm(editValues(selected)); setDirty(false);
-    } catch (err) { setError(err.message); }
+      return true;
+    } catch (err) { setError(err.message); return false; }
     finally { setLoading(false); }
+  }
+  function reload() {
+    if (dirty && !window.confirm('Discard your unsaved draft edits and load the latest saved version?')) return;
+    load(selectedId);
   }
   useEffect(() => { load(); heading.current?.focus(); }, [rfq.id]);
   function change(values) { setForm(current => ({ ...current, ...values })); setDirty(true); setSuccess(''); }
   function changeItem(index, values) { change({ items: form.items.map((item, i) => i === index ? { ...item, ...values } : item) }); }
   async function mutate(path, body, method = 'POST', notice = 'Quotation saved.') {
     setBusy(true); setError(''); setSuccess('');
+    let saved;
     try {
-      const saved = await request(path, { method, body: JSON.stringify(body) });
-      await load(saved.id); setSuccess(notice); setDecision(''); setMessage('');
-      if (saved.status === 'sent' || saved.status === 'rejected') onIssued?.();
-      emitKpcSync(saved.status === 'sent' ? 'QUOTATION_SENT' : 'QUOTATION_UPDATED', { rfq_id: rfq.id, id: saved.id });
-    } catch (err) { setError(err.message); }
-    finally { setBusy(false); }
+      saved = await request(path, { method, body: JSON.stringify(body) });
+    } catch (err) { setError(err.message); setBusy(false); return; }
+    setDecision(''); setMessage('');
+    if (saved.status === 'sent' || saved.status === 'rejected') onIssued?.();
+    emitKpcSync(saved.status === 'sent' ? 'QUOTATION_SENT' : 'QUOTATION_UPDATED', { rfq_id: rfq.id, id: saved.id });
+    const refreshed = await load(saved.id);
+    if (refreshed) setSuccess(notice);
+    else setError('Your change was saved, but the latest quotation could not be loaded. Use Reload to see the saved version.');
+    setBusy(false);
   }
   async function accept() {
     setBusy(true); setError(''); setSuccess('');
@@ -91,16 +101,16 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
     ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><h3>Submitted drawings</h3>{rfq.files?.length ? rfq.files.map(file => <ProtectedDownload className="quotation-file" key={file.id} href={`${API}/rfqs/${rfq.id}/files/${file.id}?disposition=attachment`}>{file.file_name} ↓</ProtectedDownload>) : <p className="quotation-caption">No drawings attached.</p>}</section>;
 
   return <section className="quotation-workspace" aria-busy={loading || busy}>
-    <div className="quotation-toolbar"><button className="btn btn-outline-primary" onClick={onBack} disabled={busy}>← Back to RFQs</button><button className="btn btn-outline-primary" onClick={() => load(selectedId)} disabled={busy || loading || dirty}>Refresh</button></div>
+    <div className="quotation-toolbar"><button className="btn btn-outline-primary" onClick={onBack} disabled={busy}>← Back to RFQs</button><button className="btn btn-outline-primary" onClick={reload} disabled={busy || loading}>Refresh</button></div>
     <div className="quotation-heading"><div><h2 ref={heading} tabIndex={-1}>{admin ? 'Prepare quotation' : 'Quotation review & decision'}</h2><p>{rfq.rfq_number} · {rfq.title}</p></div>{quote && <span className={`quotation-status status-${quote.status}`}>{quote.status.replaceAll('_', ' ')} · v{quote.version}</span>}</div>
-    {error && <div className="alert alert-danger" role="alert">{error} <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => load(selectedId)} disabled={busy || dirty}>Reload</button></div>}
+    {error && <div className="alert alert-danger" role="alert">{error} <button type="button" className="btn btn-sm btn-outline-danger" onClick={reload} disabled={busy || loading}>{dirty ? 'Discard edits & reload' : 'Reload'}</button></div>}
     {success && <div className="alert alert-success" role="status">{success}</div>}
     {!quote && requestDetails}
     {loading ? <div className="card p-4" role="status">Loading quotations…</div> : <>
       {quotes.length > 0 && <div className="quotation-version"><label htmlFor="quote-version">Version history</label><select id="quote-version" className="form-select" value={selectedId ?? ''} onChange={e => selectVersion(e.target.value)} disabled={busy || dirty}>{quotes.map(q => <option key={q.id} value={q.id}>Version {q.version} · {q.status}{q.is_latest ? ' · latest' : ''}</option>)}</select>{dirty && <span>Save your draft before changing versions.</span>}</div>}
-      {!quote ? <div className="card p-4"><h3>{admin ? 'No quotation yet' : 'No issued quotation yet'}</h3><p>{admin ? 'Prepare an itemized manual offer for this RFQ.' : 'KPC will make your offer available here after reviewing your requirement.'}</p>{admin && <div className="quotation-actions"><button type="button" className="btn btn-primary" disabled={busy || !!error} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { expected_version: 0, from_rfq: true }, 'POST', 'Draft created from the submitted RFQ. Enter unit prices and lead time, then save.')}>Create quotation from this RFQ</button><button type="button" className="btn btn-outline-primary" disabled={busy || !!error} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { expected_version: 0 }, 'POST', 'Blank draft created for this RFQ.')}>Create blank quotation</button></div>}</div> : <div className="quotation-grid">
+      {!loaded ? null : !quote ? <div className="card p-4"><h3>{admin ? 'No quotation yet' : 'No issued quotation yet'}</h3><p>{admin ? 'Prepare an itemized manual offer for this RFQ.' : 'KPC will make your offer available here after reviewing your requirement.'}</p>{admin && <div className="quotation-actions"><button type="button" className="btn btn-primary" disabled={busy || !!error} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { expected_version: 0, from_rfq: true }, 'POST', 'Draft created from the submitted RFQ. Enter unit prices and lead time, then save.')}>Create quotation from this RFQ</button><button type="button" className="btn btn-outline-primary" disabled={busy || !!error} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { expected_version: 0 }, 'POST', 'Blank draft created for this RFQ.')}>Create blank quotation</button></div>}</div> : <div className="quotation-grid">
         <div className="quotation-main">
-          <section className="card quotation-official"><h3>{editable ? 'Manual quotation draft' : 'Final official quote'}</h3><div className="quotation-official-content"><strong>{money(quote.total)}</strong><p>Lead time: {quote.lead_time_days ? `${quote.lead_time_days} days` : 'Not set'}</p><span>Valid until: {date(quote.valid_until)}</span><small>Manual pricing · INR · Includes the tax shown below</small></div></section>
+          <section className="card quotation-official"><h3>{editable ? 'Manual quotation draft' : 'Final official quote'}</h3><div className="quotation-official-content"><strong>{money(quote.total)}</strong><p>Lead time: {quote.lead_time_days ? `${quote.lead_time_days} days` : 'Not set'}</p><span>Valid until: {date(quote.valid_until)}</span><small>Manual pricing · INR · Includes the sample tax shown below (academic demonstration)</small></div></section>
           <section className="card quotation-items"><h3>Quotation details</h3>
             {editable ? <form id="quotation-draft" onSubmit={e => { e.preventDefault(); mutate(`/admin/quotations/${quote.id}`, { ...payload(form), expected_revision: quote.revision }, 'PUT', 'Draft saved. Review the saved totals before issuing.'); }}>
               <fieldset disabled={busy}>
@@ -112,12 +122,12 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
                   <button className="btn btn-outline-danger" type="button" aria-label={`Remove item ${i+1}`} onClick={() => change({ items: form.items.filter((_, n) => n !== i) })}>×</button>
                 </div>)}
                 <button type="button" className="btn btn-outline-primary" disabled={form.items.length >= 50} onClick={() => change({ items: [...form.items, { description: '', quantity: 1, unit_price: '0.00' }] })}>+ Add line item</button>
-                <div className="quotation-fields"><label>Tax (%)<input className="form-control" type="number" min="0" max="100" step="0.01" required value={form.tax_percent} onChange={e => change({ tax_percent: e.target.value })}/></label><label>Lead time (days)<input className="form-control" type="number" min="1" max="3650" step="1" value={form.lead_time_days} onChange={e => change({ lead_time_days: e.target.value })}/></label><label>Valid until (optional, local time)<input className="form-control" type="datetime-local" value={form.valid_until} onChange={e => change({ valid_until: e.target.value })}/></label></div>
+                <div className="quotation-fields"><label>Sample tax (%)<input className="form-control" type="number" min="0" max="100" step="0.01" required value={form.tax_percent} onChange={e => change({ tax_percent: e.target.value })}/></label><label>Lead time (days)<input className="form-control" type="number" min="1" max="3650" step="1" value={form.lead_time_days} onChange={e => change({ lead_time_days: e.target.value })}/></label><label>Valid until (optional, local time)<input className="form-control" type="datetime-local" value={form.valid_until} onChange={e => change({ valid_until: e.target.value })}/></label></div>
                 <label className="quotation-notes">Commercial notes<textarea className="form-control" rows="3" maxLength={4000} value={form.notes} onChange={e => change({ notes: e.target.value })}/></label>
                 <button className="btn btn-outline-primary" type="submit">{busy ? 'Saving…' : 'Save draft'}</button>
               </fieldset>
             </form> : <div className="table-responsive"><table className="table"><thead><tr><th>#</th><th>Description</th><th>Qty</th><th>Unit price</th><th>Amount (₹)</th></tr></thead><tbody>{quote.items.map((item, i) => <tr key={i}><td>{i+1}</td><td>{item.description}</td><td>{item.quantity}</td><td>{money(item.unit_price)}</td><td>{money(item.amount)}</td></tr>)}</tbody></table></div>}
-            <dl className="quotation-totals"><div><dt>Subtotal</dt><dd>{money(quote.subtotal)}</dd></div><div><dt>Tax ({quote.tax_percent}%)</dt><dd>{money(quote.tax_amount)}</dd></div><div><dt>Grand total</dt><dd>{money(quote.total)}</dd></div></dl><p className="quotation-caption">{dirty ? 'Totals show the last saved draft.' : 'Prices and tax are included in the total shown above.'}</p>
+            <dl className="quotation-totals"><div><dt>Subtotal</dt><dd>{money(quote.subtotal)}</dd></div><div><dt>{quote.tax_label || 'Sample tax (academic demonstration)'} ({quote.tax_percent}%)</dt><dd>{money(quote.tax_amount)}</dd></div><div><dt>Grand total</dt><dd>{money(quote.total)}</dd></div></dl><p className="quotation-caption">{dirty ? 'Totals show the last saved draft.' : 'Prices and tax are included in the total shown above.'}</p>
           </section>
           {!editable && quote.notes && <section className="card p-3"><h3>Commercial notes</h3><p className="quotation-message">{quote.notes}</p></section>}
           <div className="quotation-actions">

@@ -187,3 +187,37 @@ def test_blank_creation_and_revision_remain_explicit(client, rfq):
     revised = draft(client, rfq, admin, version=1)
     assert revised['items'][0]['description'] == 'Tooling'
     assert revised['rfq_id'] == rfq.id
+
+
+def test_revision_after_customer_rejection_preserves_history(client, rfq, db_session):
+    admin = login(client)
+    quote = send(client, draft(client, rfq, admin), admin)
+    customer = login(client, 'customer')
+    assert client.post(f"/api/quotations/{quote['id']}/decisions", json={'action': 'reject', 'message': 'Too costly'}, headers=customer).status_code == 201
+    admin = login(client)
+    revised = draft(client, rfq, admin, version=1)
+    assert revised['version'] == 2 and revised['status'] == 'draft'
+    assert client.get(f'/api/rfqs/{rfq.id}').json()['status'] == 'under_review'
+    history = client.get(f'/api/admin/rfqs/{rfq.id}/quotations').json()
+    assert history[1]['status'] == 'rejected' and history[1]['decisions'][0]['message'] == 'Too costly'
+    assert history[1]['total'] == quote['total']
+
+
+def test_admin_rejected_rfq_still_requires_reopening(client, rfq, db_session):
+    rfq.status = 'rejected'
+    db_session.commit()
+    admin = login(client)
+    response = client.post(f'/api/admin/rfqs/{rfq.id}/quotations', json={'expected_version': 0}, headers=admin)
+    assert response.status_code == 409
+
+
+def test_retried_identical_change_request_is_saved_once(client, rfq):
+    admin = login(client)
+    quote = send(client, draft(client, rfq, admin), admin)
+    customer = login(client, 'customer')
+    body = {'action': 'request_changes', 'message': 'Shorter lead time please'}
+    for _ in range(2):
+        response = client.post(f"/api/quotations/{quote['id']}/decisions", json=body, headers=customer)
+        assert response.status_code == 201, response.text
+    assert len(response.json()['decisions']) == 1
+    assert response.json()['total'] == quote['total']

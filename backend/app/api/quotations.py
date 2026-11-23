@@ -116,8 +116,13 @@ def create_draft(rfq_id: int, data: QuoteCreateInput, user: User = Depends(requi
     latest_version = quotes[0].version if quotes else 0
     if data.expected_version != latest_version:
         raise HTTPException(409, 'A newer version exists. Reload before revising.')
-    if rfq.status in ('closed', 'rejected'):
-        raise HTTPException(409, 'This RFQ is closed or rejected')
+    if rfq.status == 'closed':
+        raise HTTPException(409, 'This RFQ is closed')
+    if rfq.status == 'rejected':
+        # A Customer-rejected offer may be revised directly; other rejections need explicit reopening.
+        if not quotes or quotes[0].status != 'rejected':
+            raise HTTPException(409, 'This RFQ is rejected. Reopen it before preparing a quotation.')
+        rfq.status = 'under_review'
     if data.from_rfq:
         if quotes or data.items:
             raise HTTPException(422, 'Use the submitted requirement only for a first draft without supplied line items.')
@@ -127,7 +132,8 @@ def create_draft(rfq_id: int, data: QuoteCreateInput, user: User = Depends(requi
         data = data.model_copy(update={'items': [QuoteItemInput(
             description=rfq.title, quantity=rfq.quantity, unit_price=Decimal('0.00')
         )]})
-    if quotes:
+    if quotes and quotes[0].status != 'rejected':
+        # Preserve a Customer rejection in history; any other unaccepted version is superseded.
         quotes[0].status = 'superseded'
     quote = Quotation(rfq_id=rfq_id, version=latest_version + 1, revision=1, created_by=user.id,
                       status='draft', pricing_source='manual', estimation_id=None)
@@ -170,6 +176,10 @@ def decide_quote(quote_id: int, data: QuoteDecisionInput, user: User = Depends(r
     quote, latest = quote_for_update(db, quote_id, user)
     if quote.id != latest.id or quote.status != 'sent' or expired(quote):
         raise HTTPException(409, 'This offer is no longer available for a decision. Reload the latest quotation.')
+    previous = quote.decisions[-1] if quote.decisions else None
+    if previous and previous.action == data.action and previous.message == data.message:
+        # A retried identical response (e.g. after a lost reply) returns the saved decision.
+        return output(quote, latest)
     quote.decisions.append(QuotationDecision(customer_id=user.id, action=data.action, message=data.message))
     if data.action == 'reject':
         quote.status = 'rejected'
