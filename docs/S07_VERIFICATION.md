@@ -2,6 +2,38 @@
 
 Scope: REQ-14, REQ-15, REQ-16 and manual provenance in REQ-13. Acceptance/order/invoice creation remains S08. This record does not close S01/S02 or claim hosted deployment verification.
 
+## Current issue verification — 24 November 2026
+
+Baseline: `a288756`, including the existing S07 fix `682d52b`, plus the S07 changes committed with this record. Earlier evidence below is historical and is not counted in this run.
+
+- #33: verified issue v1 → Customer reject → Admin revise directly → issue v2 → Customer select v2. Rejected v1 retains its original itemization, amounts and response; only v2 is eligible. The rework success message now accurately says the prior version remains in history rather than claiming that a rejected version became superseded.
+- #34: verified two independently authenticated Admin browser tabs on draft v3. Admin B saved notes first. Admin A's stale save returned a conflict and retained its unsaved notes. Cancelling the discard confirmation preserved them; confirming loaded Admin B's notes. Confirmed save followed by a forced quotation-GET 503 showed “Your change was saved, but the latest quotation could not be loaded.” Removing the fault and selecting Reload recovered the saved revision. An independent database query confirmed revision 3, the saved notes, and exactly three quotation versions. Initial GET failure on reopening showed an error and Reload, without an empty-list claim or draft-creation action; recovery restored v3. Successful mutation responses now immediately replace the local saved revision/status before the subsequent retrieval, so a failed retrieval cannot leave the UI using the previous revision. Manual refresh clears obsolete success feedback.
+- #35: Admin input and both roles' pricing summaries visibly identify sample academic tax. The local fixture used one line with quantity 2 at INR 100 unit price, sample tax 8%, subtotal INR 200, tax INR 16, total INR 216; these are isolated test records, not business facts. Version history retained those amounts. No monetary calculation code changed.
+- #36: the three previously skipped PostgreSQL races now pass, alongside a new rejected-version race, failed-revision rollback test, and migration-chain retention check. Hosted authenticated quotation/session/persistence verification is **not run**. On 24 November 2026 the task owner explicitly instructed: “ignore the hosted one, the fixes is okay commit and close the issue”. #36 is closed with this owner-approved waiver; this is not a hosted acceptance pass.
+
+Environment: native local PostgreSQL, disposable database `kpc_s09_test` on `127.0.0.1:55439`; each automated PostgreSQL case uses its own generated schema. No shared Supabase records were touched. Local browser uses the approved frontend `127.0.0.1:5173` and backend `127.0.0.1:8001`. The API was restarted during the browser run and retained quotations/sessions. Failure injection used a temporary wrapper outside the repository around the actual FastAPI application: only GET paths ending `/quotations` returned 503 while a temporary flag existed. Writes and the database remained real; the flag was removed after verification. This is local failure evidence, not a hosted fault-injection pass.
+
+Commands and final results:
+
+```sh
+cd backend
+S07_POSTGRES_TEST_URL=postgresql+psycopg://127.0.0.1:55439/kpc_s09_test .venv/bin/python -B -m pytest -q -ra -p no:cacheprovider tests/test_quotations_s07.py tests/test_quotations_s07_postgres.py tests/test_migrations_s07.py tests/test_acceptance_s08.py
+# 35 passed; 0 failed; 0 skipped; 0 xfailed; 0 errors; 1 Starlette/httpx deprecation warning.
+cd ..
+node --test frontend/tests/*.test.js
+# 10 passed; 0 failed; 0 skipped; 0 cancelled; 0 todo.
+npm --prefix frontend run build
+# Passed.
+git diff --check
+# Passed.
+```
+
+`test_migrations_s07.py` executes real Alembic upgrades 001 through 006 sequentially, seeds quotation/items/rejection history, disposes connections, repeats upgrade 006 in a new process, then verifies retained records, version uniqueness and quotation constraints. It does not substitute `create_all` for migrations. The five concurrency/rollback test cases separately use PostgreSQL row locks. Frontend hook tests exercise stale-input retention, cancelled/failed/successful discard recovery, confirmed-write/failed-retrieval handling, load-error versus empty-state behavior, and sample tax disclosure; they are not counted as browser tests.
+
+Visual references opened: `docs/ui-ux/admin/rfqs-and-quotations.webp`, `docs/ui-ux/customer/quotation-review.webp`, `docs/ui-ux/global/ui-kit.webp`. Native Chrome screenshots and accessibility observations checked existing shells, navy/orange hierarchy, item table, totals, summary, version controls, error/retry and discard prompt. The small native browser window was checked using page zoom to exercise wide desktop layout (Admin 50%, Customer 33%) and a narrow layout (150% for both roles); this is responsive browser evidence, not physical-device testing. The sidebar collapses at narrow width; forms and primary actions stack; tax wording remains readable. No route, shared layout, stylesheet, dependency, port or deployment configuration changed. Intentional adaptations are explicit academic-tax disclosure and honest recovery feedback within the existing layout; excluded AI/confidence, notification and 60/40 controls from old references remain excluded.
+
+Remaining not-run checks: authenticated hosted Customer/Admin journeys against identified deployed revisions, hosted quotation retention after reload/restart, and deployed same-origin session/CSRF behavior. The supplied Vercel URL alone does not establish those checks. #33–#35 have local API/PostgreSQL/browser evidence. The task owner waived the hosted portion of #36 for this closure; those checks remain not run and must not be presented as passed or as full hosted/release acceptance.
+
 ## Contract and evidence
 
 Fixtures: isolated Customer 1/Customer 2, Admin and Employee accounts; a Customer 1 custom RFQ. Browser fixtures use a separate disposable localhost PostgreSQL database, never Supabase. No model artifact is installed or required.

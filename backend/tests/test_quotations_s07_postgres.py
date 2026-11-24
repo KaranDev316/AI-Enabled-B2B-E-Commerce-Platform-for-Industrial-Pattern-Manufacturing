@@ -6,7 +6,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import create_engine, select, text
+from sqlalchemy import create_engine, event, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
@@ -38,8 +39,8 @@ def pg_engine():
         root.dispose()
 
 
-@pytest.mark.parametrize('prior_version', [0, 1])
-def test_simultaneous_versions_are_serialized(pg_engine, prior_version):
+@pytest.mark.parametrize('prior_version,prior_status', [(0, 'draft'), (1, 'draft'), (1, 'rejected')])
+def test_simultaneous_versions_are_serialized(pg_engine, prior_version, prior_status):
     with Session(pg_engine) as db:
         user = User(email='admin@s07.test', password_hash='test-only', role='admin', is_active=True)
         db.add(user); db.flush()
@@ -48,6 +49,10 @@ def test_simultaneous_versions_are_serialized(pg_engine, prior_version):
         user_id, rfq_id = user.id, rfq.id
         if prior_version:
             create_draft(rfq_id, QuoteCreateInput(expected_version=0), user, db)
+            if prior_status == 'rejected':
+                db.scalar(select(Quotation)).status = 'rejected'
+                db.get(RFQ, rfq_id).status = 'rejected'
+                db.commit()
     barrier = Barrier(2)
 
     def attempt():
@@ -68,7 +73,33 @@ def test_simultaneous_versions_are_serialized(pg_engine, prior_version):
         assert len(quotes) == prior_version + 1
         assert quotes[-1].version == prior_version + 1 and quotes[-1].status == 'draft'
         if prior_version:
-            assert quotes[0].status == 'superseded'
+            assert quotes[0].status == ('rejected' if prior_status == 'rejected' else 'superseded')
+
+
+def test_failed_revision_rolls_back_reopening_and_preserves_rejected_offer(pg_engine):
+    with Session(pg_engine) as db:
+        user = User(email='rollback@s07.test', password_hash='fixture-only', role='admin', is_active=True)
+        db.add(user); db.flush()
+        rfq = RFQ(rfq_number='RFQ-ROLLBACK', customer_id=user.id, title='Tooling', material='Wood', quantity=1)
+        db.add(rfq); db.commit()
+        rfq_id = rfq.id
+        first = create_draft(rfq_id, QuoteCreateInput(expected_version=0), user, db)
+        db.get(Quotation, first['id']).status = 'rejected'
+        db.get(RFQ, rfq_id).status = 'rejected'
+        db.commit()
+        def fail_insert(*_args):
+            raise IntegrityError('injected revision failure', {}, Exception('test failure'))
+        event.listen(Quotation, 'before_insert', fail_insert)
+        try:
+            with pytest.raises(HTTPException) as failure:
+                create_draft(rfq_id, QuoteCreateInput(expected_version=1), user, db)
+            assert failure.value.status_code == 409
+        finally:
+            event.remove(Quotation, 'before_insert', fail_insert)
+        db.expire_all()
+        assert db.get(RFQ, rfq_id).status == 'rejected'
+        assert len(list(db.scalars(select(Quotation)))) == 1
+        assert db.get(Quotation, first['id']).status == 'rejected'
 
 
 def test_simultaneous_draft_edits_do_not_overwrite(pg_engine):

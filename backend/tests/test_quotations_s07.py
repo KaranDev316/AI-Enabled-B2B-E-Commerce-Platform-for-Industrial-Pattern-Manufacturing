@@ -201,6 +201,12 @@ def test_revision_after_customer_rejection_preserves_history(client, rfq, db_ses
     history = client.get(f'/api/admin/rfqs/{rfq.id}/quotations').json()
     assert history[1]['status'] == 'rejected' and history[1]['decisions'][0]['message'] == 'Too costly'
     assert history[1]['total'] == quote['total']
+    issued = send(client, revised, admin)
+    login(client, 'customer')
+    visible = client.get(f'/api/rfqs/{rfq.id}/quotations').json()
+    assert visible[0]['id'] == issued['id'] and visible[0]['can_respond']
+    assert visible[1]['status'] == 'rejected' and not visible[1]['can_respond']
+    assert visible[1]['items'] == quote['items']
 
 
 def test_admin_rejected_rfq_still_requires_reopening(client, rfq, db_session):

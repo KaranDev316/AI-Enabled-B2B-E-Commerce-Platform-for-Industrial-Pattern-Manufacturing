@@ -44,7 +44,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
     const response = await fetch(`${API}${path}`, { credentials: 'include', ...options,
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken, ...options.headers } });
     const data = await response.json();
-    if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Check the quotation fields and try again.');
+    if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : data.detail?.message || 'Unable to complete the quotation request. Please try again.');
     return data;
   }
   async function load(id, { keepError = false } = {}) {
@@ -60,7 +60,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
   }
   function reload() {
     if (dirty && !window.confirm('Discard your unsaved draft edits and load the latest saved version?')) return;
-    load(selectedId);
+    setSuccess(''); load(selectedId);
   }
   useEffect(() => { load(); heading.current?.focus(); }, [rfq.id]);
   function change(values) { setForm(current => ({ ...current, ...values })); setDirty(true); setSuccess(''); }
@@ -71,6 +71,12 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
     try {
       saved = await request(path, { method, body: JSON.stringify(body) });
     } catch (err) { setError(err.message); setBusy(false); return; }
+    // The write is confirmed even if the following retrieval fails. Keep its
+    // revision/status so a retry cannot replay a stale create/send/save action.
+    setQuotes(current => [saved, ...current.filter(q => q.id !== saved.id).map(q => (
+      q.version < saved.version ? { ...q, is_latest: false, can_respond: false } : q
+    ))].sort((a, b) => b.version - a.version));
+    setSelectedId(saved.id); setForm(editValues(saved)); setDirty(false); setLoaded(true);
     setDecision(''); setMessage('');
     if (saved.status === 'sent' || saved.status === 'rejected') onIssued?.();
     emitKpcSync(saved.status === 'sent' ? 'QUOTATION_SENT' : 'QUOTATION_UPDATED', { rfq_id: rfq.id, id: saved.id });
@@ -131,7 +137,7 @@ export function QuotationWorkspace({ rfq, admin = false, csrfToken, onBack, onIs
           </section>
           {!editable && quote.notes && <section className="card p-3"><h3>Commercial notes</h3><p className="quotation-message">{quote.notes}</p></section>}
           <div className="quotation-actions">
-            {admin ? <>{editable ? <><button className="btn btn-primary" disabled={busy || dirty || !quote.items.length || !quote.lead_time_days || Number(quote.total) <= 0} onClick={() => mutate(`/admin/quotations/${quote.id}/send`, { expected_revision: quote.revision }, 'POST', 'Quotation issued to the customer portal.')}>Issue quotation</button><span>Save and review the draft before issuing.</span></> : latest?.status !== 'accepted' && <button className="btn btn-primary" disabled={busy || !quote.is_latest} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { ...payload(editValues(latest)), expected_version: latest.version }, 'POST', 'New draft created. The previous version is now superseded.')}>Create revised draft</button>}</> : <><button className="btn btn-outline-danger" disabled={busy || !quote.can_respond} onClick={() => setDecision('reject')}>Reject quotation</button><button className="btn btn-outline-primary" disabled={busy || !quote.can_respond} onClick={() => setDecision('request_changes')}>Request changes</button><button className="btn btn-primary" disabled={busy || (!quote.can_respond && quote.status !== 'accepted')} onClick={accept}>{quote.status === 'accepted' ? 'Retrieve order & invoice' : 'Accept & place order'}</button></>}
+            {admin ? <>{editable ? <><button className="btn btn-primary" disabled={busy || dirty || !quote.items.length || !quote.lead_time_days || Number(quote.total) <= 0} onClick={() => mutate(`/admin/quotations/${quote.id}/send`, { expected_revision: quote.revision }, 'POST', 'Quotation issued to the customer portal.')}>Issue quotation</button><span>Save and review the draft before issuing.</span></> : latest?.status !== 'accepted' && <button className="btn btn-primary" disabled={busy || !quote.is_latest} onClick={() => mutate(`/admin/rfqs/${rfq.id}/quotations`, { ...payload(editValues(latest)), expected_version: latest.version }, 'POST', 'New draft created. The previous version remains in quotation history.')}>Create revised draft</button>}</> : <><button className="btn btn-outline-danger" disabled={busy || !quote.can_respond} onClick={() => setDecision('reject')}>Reject quotation</button><button className="btn btn-outline-primary" disabled={busy || !quote.can_respond} onClick={() => setDecision('request_changes')}>Request changes</button><button className="btn btn-primary" disabled={busy || (!quote.can_respond && quote.status !== 'accepted')} onClick={accept}>{quote.status === 'accepted' ? 'Retrieve order & invoice' : 'Accept & place order'}</button></>}
           </div>
           {!admin && <p className="quotation-caption">{quote.can_respond ? 'Accept this offer to create an awaiting-payment order, or reject it or request changes.' : quote.status === 'accepted' ? 'This quotation has been accepted. Retrieve its existing order and invoice below.' : 'This version is no longer available for a decision. KPC may be preparing a revised offer.'}</p>}
           {acceptedOrder && <div className="quotation-actions"><button className="btn btn-primary" onClick={() => onAccepted?.(acceptedOrder)}>View my orders</button><ProtectedDownload className="btn btn-outline-primary" href={`${API}/invoices/${acceptedOrder.invoice_id}/download`}>Download invoice</ProtectedDownload></div>}
